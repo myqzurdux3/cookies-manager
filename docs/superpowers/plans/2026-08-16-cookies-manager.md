@@ -3389,3 +3389,82 @@ sont corrigés ici et doivent être reportés dans le document de spec :
    `siteSettings` dans le plan : `chrome.permissions` désigne déjà les
    permissions de l'extension elle-même, et la collision de noms serait une
    source de bugs.
+
+---
+
+### Task 14: Coffre de cookies (optionnel, désactivé par défaut)
+
+Ajouté après la seconde session de conception. Voir la section « Coffre de
+cookies » de la spec. À implémenter **après** la Task 13 : le coffre est une
+greffe sur un produit qui doit d'abord fonctionner sans lui.
+
+**Files:**
+- Create: `src/core/vault.ts`
+- Test: `tests/core/vault.test.ts`
+- Modify: `src/core/engine.ts`, `src/ui/options/options.ts`, `src/ui/popup/popup.ts`
+
+**Interfaces:**
+- Consumes : `StorageArea`, `chrome.cookies.Cookie`, `SubtleCrypto` (injecté).
+- Produces :
+  - `type VaultRecord = { version: 1; salt: string; iv: string; iterations: number; cipher: string; createdAt: number; cookieCount: number; domains: string[] }`
+  - `createVault(subtle: SubtleCrypto, area: StorageArea): Vault`
+  - `Vault` expose :
+    - `store(cookies: Cookie[], passphrase: string, at: number): Promise<void>`
+    - `read(passphrase: string): Promise<Cookie[]>`
+    - `describe(): Promise<Omit<VaultRecord, 'cipher' | 'salt' | 'iv'> | null>`
+    - `purgeExpired(now: number, retentionDays: number): Promise<boolean>`
+    - `clear(): Promise<void>`
+  - `VAULT_KEY = 'vault'`, `DEFAULT_RETENTION_DAYS = 7`, `PBKDF2_ITERATIONS`
+
+**Contraintes propres à cette tâche :**
+- `AES-256-GCM`, clé dérivée par `PBKDF2-SHA-256`, sel et vecteur d'initialisation
+  aléatoires par écriture. La clé n'est jamais persistée.
+- Le coffre va dans `chrome.storage.local`. Jamais dans `sync`.
+- `describe()` ne rend que des métadonnées : jamais de valeur de cookie, jamais
+  le sel ni le vecteur d'initialisation.
+- Une phrase secrète fausse doit produire une erreur distincte d'un coffre absent
+  ou d'un coffre corrompu — l'interface a trois messages différents à afficher.
+- Le coffre est désactivé par défaut : `vaultEnabled: false` dans les réglages.
+
+- [ ] **Step 1: Écrire les tests qui échouent**
+
+Créer `tests/core/vault.test.ts`. Utiliser le `webcrypto` de `node:crypto` comme
+`SubtleCrypto` injecté et le `fakeArea` déjà employé dans `tests/core/engine.test.ts`.
+Cas obligatoires :
+
+- Aller-retour : `store` puis `read` avec la bonne phrase rend les cookies identiques.
+- Mauvaise phrase : `read` rejette avec l'erreur « phrase incorrecte », et ne rend
+  jamais de données partielles.
+- Coffre absent : `read` et `describe` distinguent ce cas d'une phrase fausse.
+- Deux `store` successifs avec la même phrase produisent des chiffrés différents
+  (sel et vecteur d'initialisation aléatoires).
+- `describe` ne contient ni `cipher`, ni `salt`, ni `iv`, ni aucune valeur de cookie.
+- `purgeExpired` supprime au-delà de la rétention, conserve en deçà, et rend un
+  booléen indiquant s'il a supprimé.
+- `store` écrit bien sous `VAULT_KEY` dans l'aire de stockage, et nulle part ailleurs.
+
+- [ ] **Step 2: Lancer les tests pour vérifier qu'ils échouent**
+
+- [ ] **Step 3: Écrire `src/core/vault.ts`**
+
+- [ ] **Step 4: Lancer les tests pour vérifier qu'ils passent**
+
+- [ ] **Step 5: Brancher le coffre dans `src/core/engine.ts`**
+
+Quand le coffre est actif et que le plan comporte la catégorie `cookies` :
+l'aperçu exact des cookies condamnés est calculé avant suppression, puis remis au
+coffre. **Si `store` échoue, la catégorie `cookies` est marquée `failed` et ses
+cookies ne sont pas supprimés ; les autres catégories poursuivent normalement.**
+Test dédié à ce chemin d'échec — c'est la garantie centrale de la fonctionnalité.
+
+- [ ] **Step 6: Interface**
+
+Options : case d'activation, champ de rétention, avertissement sur la nature du
+coffre (jetons de session) et sur la perte définitive en cas de phrase oubliée,
+bouton de restauration, bouton de suppression du coffre.
+Popup : demande de la phrase avant lancement si le coffre est actif, et mention
+dans l'aperçu que seuls les cookies sont sauvegardés.
+
+- [ ] **Step 7: Lancer la suite complète**
+
+- [ ] **Step 8: Commit**
