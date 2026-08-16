@@ -44,7 +44,31 @@ confirmation rouge n'est pas cochée.
 Attendu : le navigateur demande la permission ; un refus affiche un message
 d'échec sans rien supprimer.
 
-## Scénario 5 — le journal enregistre
+## Scénario 5 bis — le coffre protège d'une keep-list mal réglée
+
+1. Options → cocher « Sauvegarder les cookies avant suppression », enregistrer.
+2. Lancer un nettoyage des cookies **sans** protéger `github.com`, en saisissant
+   une phrase secrète dans la popup.
+3. Constater la déconnexion de `github.com`.
+4. Options → saisir la même phrase → « Restaurer les cookies ».
+
+Attendu : la session `github.com` est de nouveau active après rechargement.
+
+5. Refaire une restauration avec une phrase fausse.
+
+Attendu : message « phrase incorrecte », aucun cookie restauré.
+
+6. Vider le champ de rétention à `0` et enregistrer.
+
+Attendu : les réglages sont refusés avec un message sur la rétention.
+
+## Scénario 5 ter — pas de suppression sans sauvegarde
+
+1. Coffre actif, lancer un nettoyage des cookies en laissant la phrase vide.
+
+Attendu : la popup refuse et annonce que rien n'a été supprimé.
+
+## Scénario 6 — le journal enregistre
 
 1. Après un nettoyage, ouvrir la console du service worker.
 2. Lire `chrome.storage.local.get('runs')`.
