@@ -1,5 +1,29 @@
 <!doctype html>
 <html lang="fr">
-  <head><meta charset="utf-8" /><title>Cookies Manager</title></head>
-  <body><main id="app"></main><script type="module" src="/src/ui/popup/popup.ts"></script></body>
+  <head>
+    <meta charset="utf-8" />
+    <title>Cookies Manager</title>
+    <link rel="stylesheet" href="/src/ui/popup/popup.css" />
+  </head>
+  <body>
+    <h1>Nettoyage</h1>
+    <ul id="profiles"></ul>
+    <section id="preview" hidden>
+      <h2>Aperçu</h2>
+      <ul id="preview-list"></ul>
+      <label id="danger" hidden>
+        <input type="checkbox" id="danger-check" />
+        Je confirme la suppression des mots de passe ou des données de formulaire. Cette action est
+        définitive.
+      </label>
+      <button id="confirm" type="button">Nettoyer</button>
+      <button id="cancel" type="button">Annuler</button>
+    </section>
+    <section id="report" hidden>
+      <h2>Rapport</h2>
+      <ul id="report-list"></ul>
+    </section>
+    <a href="options.html" target="_blank">Configurer les profils</a>
+    <script type="module" src="/src/ui/popup/popup.ts"></script>
+  </body>
 </html>
