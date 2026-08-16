@@ -37,7 +37,9 @@ Hors périmètre, décidé explicitement :
   mode manuel ; un binaire local ajouterait une installation, des permissions
   fortes et une seconde base de code pour un gain quasi nul. La porte reste
   ouverte si un besoin réel apparaît.
-- Toute fonction d'annulation. Les données supprimées ne reviennent pas.
+- Toute annulation générale. Les données supprimées ne reviennent pas — à la
+  seule exception des cookies, couverts par le coffre optionnel (voir
+  « Coffre de cookies »), désactivé par défaut.
 
 ## Contrainte fondatrice
 
@@ -176,6 +178,60 @@ qui permet de vérifier après coup que la keep-list a protégé ce qu'il fallai
   aucune dépendance runtime. Une extension qui lit les cookies ne doit avoir
   aucun moyen de les faire sortir, et cela doit être vérifiable dans le
   manifeste.
+
+## Coffre de cookies
+
+Ajout de la seconde session de conception, 2026-08-16. Fonctionnalité
+**optionnelle et désactivée par défaut**.
+
+### Ce que c'est, et le risque qu'il porte
+
+Avant une suppression de cookies, le moteur écrit les cookies condamnés dans un
+coffre chiffré, restaurable pendant une durée limitée. Cela répond au seul échec
+réellement coûteux de l'outil : une keep-list mal réglée qui déconnecte d'un site
+auquel on tenait.
+
+Il faut nommer le risque clairement. **Un coffre de cookies est un coffre de
+jetons de session actifs.** Déchiffré, il permet d'usurper les sessions
+concernées sans mot de passe et sans second facteur. Cette fonctionnalité fait
+donc conserver à un outil de suppression exactement ce qu'il est censé détruire.
+C'est pour cette raison qu'elle est désactivée par défaut et qu'elle demande une
+activation explicite dans les options.
+
+### Décision : pas de compagnon natif
+
+La décision « pas de compagnon natif » du présent document est **maintenue**. Une
+variante de conception envisageait un binaire local détenant la clé dans le
+trousseau du système ; elle a été écartée. Le gain était le confort — aucune
+phrase à saisir — pour le prix d'une seconde base de code, d'un installateur, de
+manifestes de native messaging par navigateur et de permissions fortes. Le coffre
+tient entièrement dans l'extension.
+
+### Mise en œuvre
+
+- Chiffrement `AES-256-GCM` via WebCrypto. Clé dérivée d'une phrase secrète par
+  `PBKDF2-SHA-256`, itérations élevées, sel aléatoire par coffre.
+- La clé n'est jamais persistée. Elle vit en mémoire le temps de l'opération.
+- Le blob chiffré va dans `chrome.storage.local`, jamais dans `sync` — même
+  raison que pour les profils : cette donnée n'a rien à faire sur un serveur
+  tiers.
+- Le coffre porte sel, vecteur d'initialisation, nombre d'itérations et version
+  de format, pour rester déchiffrable après évolution du schéma.
+- Rétention par défaut sept jours ; au-delà, le coffre est écrasé puis supprimé.
+- **Un échec d'écriture du coffre annule la suppression des cookies.** Jamais de
+  suppression sans la sauvegarde promise. Les autres catégories poursuivent leur
+  exécution normalement, conformément à l'isolation des cleaners.
+- La restauration réinjecte des sessions vivantes : phrase secrète, affichage de
+  ce qui sera restauré, confirmation explicite.
+- Une phrase secrète perdue rend le coffre définitivement illisible. L'interface
+  le dit au moment de l'activation, pas au moment de la restauration.
+
+### Ce qui reste hors du coffre
+
+Seuls les cookies. Le stockage web, le cache, l'historique et les identifiants ne
+sont pas sauvegardés : soit l'API ne permet pas de les relire avant suppression,
+soit les réécrire supposerait d'injecter des données dans des origines
+arbitraires. L'interface ne laisse pas croire le contraire.
 
 ## Tests
 

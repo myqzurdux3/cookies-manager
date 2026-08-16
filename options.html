@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Cookies Manager — options</title>
+    <link rel="stylesheet" href="/src/ui/options/options.css" />
+  </head>
+  <body>
+    <h1>Profils de nettoyage</h1>
+    <select id="profile-select"></select>
+    <button id="new-profile" type="button">Nouveau profil</button>
+    <button id="delete-profile" type="button">Supprimer</button>
+
+    <form id="editor">
+      <label>Nom <input type="text" id="name" required /></label>
+      <label>
+        Période
+        <select id="since">
+          <option value="hour">Dernière heure</option>
+          <option value="day">Dernier jour</option>
+          <option value="week">Dernière semaine</option>
+          <option value="month">Dernier mois</option>
+          <option value="all">Tout</option>
+        </select>
+      </label>
+
+      <h2>Catégories nettoyées</h2>
+      <div id="categories"></div>
+
+      <h2>Sites conservés</h2>
+      <p class="hint">
+        Motifs acceptés : <code>github.com</code> (hôte exact), <code>*.github.com</code>
+        (sous-domaines inclus), <code>*</code> (tous les sites). Les cases grisées correspondent aux
+        catégories que l'API navigateur ne sait pas exclure par site.
+      </p>
+      <table id="keeplist"></table>
+      <input type="text" id="new-pattern" placeholder="exemple.com" />
+      <button id="add-pattern" type="button">Ajouter un site</button>
+
+      <button type="submit">Enregistrer</button>
+    </form>
+
+    <h2>Coffre de cookies</h2>
+    <p class="warning">
+      Un coffre de cookies est un coffre de jetons de session actifs : déchiffré, il permet
+      d'usurper vos sessions sans mot de passe ni second facteur. Il est chiffré par une phrase
+      secrète que vous seul connaissez, et qui n'est jamais enregistrée — <strong>une phrase oubliée
+      rend le coffre définitivement illisible</strong>. Seuls les cookies sont sauvegardés : les
+      autres catégories ne sont pas relisibles avant suppression.
+    </p>
+    <label><input type="checkbox" id="vault-enabled" /> Sauvegarder les cookies avant suppression</label>
+    <label>
+      Rétention (jours)
+      <input type="number" id="vault-retention" min="1" max="90" step="1" />
+    </label>
+    <button id="save-settings" type="button">Enregistrer les réglages</button>
+    <p id="vault-state"></p>
+    <label>
+      Phrase secrète
+      <input type="password" id="vault-passphrase" autocomplete="off" />
+    </label>
+    <button id="vault-restore" type="button">Restaurer les cookies</button>
+    <button id="vault-clear" type="button">Supprimer le coffre</button>
+
+    <h2>Sauvegarde de la configuration</h2>
+    <button id="export" type="button">Exporter en JSON</button>
+    <textarea id="import-area" placeholder="Coller un JSON de profils ici"></textarea>
+    <button id="import" type="button">Importer</button>
+    <p id="status" role="status"></p>
+
+    <script type="module" src="/src/ui/options/options.ts"></script>
+  </body>
+</html>
