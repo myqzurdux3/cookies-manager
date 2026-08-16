@@ -17,7 +17,7 @@ export function createHttpCacheCleaner(api: BrowsingDataApi): Cleaner {
     async clean(plan: CategoryPlan): Promise<CleanReport> {
       try {
         await api.browsingData.remove({ since: plan.since }, { cache: true });
-        return { status: 'ok', deleted: 0, kept: 0 };
+        return { status: 'ok', deleted: 0, kept: 0, countable: false };
       } catch (cause) {
         return {
           status: 'failed',

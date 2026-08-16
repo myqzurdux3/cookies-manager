@@ -2,11 +2,14 @@ import { describe, it, expect } from 'vitest';
 import {
   CATEGORY_LABELS,
   formatRestoreReport,
+  formatRunSummary,
   formatVaultState,
   needsExtraConfirmation,
   previewRow,
   profileMeta,
+  protectedSites,
   reportRow,
+  runSummary,
 } from '../../src/ui/labels';
 import { ALL_CATEGORIES } from '../../src/core/types';
 
@@ -77,6 +80,91 @@ describe('reportRow', () => {
       note: 'permission refusée',
       tone: 'failed',
     });
+  });
+});
+
+describe('reportRow, catégories non chiffrables', () => {
+  it('dit « vidé entièrement » au lieu de « 0 supprimé »', () => {
+    expect(
+      reportRow({
+        category: 'httpCache',
+        report: { status: 'ok', deleted: 0, kept: 0, countable: false },
+      }),
+    ).toEqual({ label: 'Cache HTTP', value: 'vidé entièrement', tone: 'strong' });
+  });
+
+  it('garde le message d’échec quand la catégorie non chiffrable échoue', () => {
+    expect(
+      reportRow({
+        category: 'httpCache',
+        report: { status: 'failed', deleted: 0, kept: 0, error: 'refusé' },
+      }).value,
+    ).toBe('échec');
+  });
+});
+
+describe('runSummary', () => {
+  it('additionne les suppressions et les conservations', () => {
+    const summary = runSummary([
+      { category: 'cookies', report: { status: 'ok', deleted: 128, kept: 12 } },
+      { category: 'history', report: { status: 'ok', deleted: 170, kept: 32 } },
+    ]);
+    expect(summary).toMatchObject({ deleted: 298, kept: 44, wiped: 0, failed: 0 });
+  });
+
+  it('compte à part les catégories vidées en bloc', () => {
+    const summary = runSummary([
+      { category: 'cookies', report: { status: 'ok', deleted: 4, kept: 1 } },
+      { category: 'httpCache', report: { status: 'ok', deleted: 0, kept: 0, countable: false } },
+      { category: 'passwords', report: { status: 'ok', deleted: 0, kept: 0, countable: false } },
+    ]);
+    expect(summary).toMatchObject({ deleted: 4, kept: 1, wiped: 2 });
+  });
+
+  it('compte les échecs, partiels compris', () => {
+    const summary = runSummary([
+      { category: 'cookies', report: { status: 'partial', deleted: 2, kept: 0, error: 'x' } },
+      { category: 'history', report: { status: 'failed', deleted: 0, kept: 0, error: 'y' } },
+    ]);
+    expect(summary.failed).toBe(2);
+  });
+});
+
+describe('formatRunSummary', () => {
+  it('résume en une phrase', () => {
+    expect(formatRunSummary({ deleted: 312, kept: 47, wiped: 0, failed: 0 })).toBe(
+      '312 éléments supprimés · 47 conservés',
+    );
+  });
+
+  it('mentionne les catégories vidées en bloc', () => {
+    expect(formatRunSummary({ deleted: 4, kept: 1, wiped: 2, failed: 0 })).toBe(
+      '4 éléments supprimés · 1 conservé · 2 catégories vidées entièrement',
+    );
+  });
+
+  it('signale les échecs', () => {
+    expect(formatRunSummary({ deleted: 4, kept: 0, wiped: 0, failed: 1 })).toBe(
+      '4 éléments supprimés · 0 conservé · 1 catégorie en échec',
+    );
+  });
+});
+
+describe('protectedSites', () => {
+  it('rend les motifs qui protègent au moins une catégorie', () => {
+    expect(
+      protectedSites({
+        keepRules: [
+          { pattern: '*.google.com', keep: { cookies: true } },
+          { pattern: 'vide.com', keep: {} },
+          { pattern: 'github.com', keep: { history: true } },
+        ],
+      }),
+    ).toEqual(['*.google.com', 'github.com']);
+  });
+
+  it('rend une liste vide quand rien n’est protégé', () => {
+    expect(protectedSites({ keepRules: [] })).toEqual([]);
   });
 });
 

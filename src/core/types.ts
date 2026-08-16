@@ -54,6 +54,12 @@ export type CleanReport = {
   deleted: number;
   kept: number;
   error?: string;
+  /**
+   * `false` quand l'API ne rend aucun décompte : la catégorie a été vidée en
+   * bloc. Sans ce drapeau, `deleted: 0` se lirait « rien n'a été supprimé »
+   * alors que tout l'a été.
+   */
+  countable?: boolean;
 };
 
 export interface Cleaner {

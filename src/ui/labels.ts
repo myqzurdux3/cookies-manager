@@ -49,10 +49,15 @@ export function previewRow(result: PreviewResult): Row {
 
 export function reportRow(result: CategoryResult): Row {
   const label = CATEGORY_LABELS[result.category];
-  const { status, deleted, kept, error } = result.report;
+  const { status, deleted, kept, error, countable } = result.report;
 
   if (status === 'failed') {
     return { label, value: 'échec', note: error ?? 'raison inconnue', tone: 'failed' };
+  }
+
+  // Sans décompte possible, « 0 supprimé » se lirait « rien n'a bougé ».
+  if (countable === false) {
+    return { label, value: 'vidé entièrement', tone: 'strong' };
   }
 
   const value = `${deleted} supprimé(s) · ${kept} conservé(s)`;
@@ -60,6 +65,45 @@ export function reportRow(result: CategoryResult): Row {
     return { label, value, note: `échec partiel : ${error ?? 'raison inconnue'}`, tone: 'failed' };
   }
   return { label, value, tone: 'strong' };
+}
+
+export type RunSummary = { deleted: number; kept: number; wiped: number; failed: number };
+
+export function runSummary(results: CategoryResult[]): RunSummary {
+  return results.reduce<RunSummary>(
+    (total, { report }) => ({
+      deleted: total.deleted + report.deleted,
+      kept: total.kept + report.kept,
+      wiped: total.wiped + (report.countable === false && report.status === 'ok' ? 1 : 0),
+      failed: total.failed + (report.status === 'ok' ? 0 : 1),
+    }),
+    { deleted: 0, kept: 0, wiped: 0, failed: 0 },
+  );
+}
+
+function plural(count: number, one: string, many: string): string {
+  return `${count} ${count > 1 ? many : one}`;
+}
+
+export function formatRunSummary(summary: RunSummary): string {
+  const parts = [
+    plural(summary.deleted, 'élément supprimé', 'éléments supprimés'),
+    plural(summary.kept, 'conservé', 'conservés'),
+  ];
+  if (summary.wiped > 0) {
+    parts.push(plural(summary.wiped, 'catégorie vidée entièrement', 'catégories vidées entièrement'));
+  }
+  if (summary.failed > 0) {
+    parts.push(plural(summary.failed, 'catégorie en échec', 'catégories en échec'));
+  }
+  return parts.join(' · ');
+}
+
+/** Motifs qui protègent effectivement quelque chose : une règle sans case cochée ne compte pas. */
+export function protectedSites(profile: Pick<Profile, 'keepRules'>): string[] {
+  return profile.keepRules
+    .filter((rule) => Object.values(rule.keep).some((kept) => kept === true))
+    .map((rule) => rule.pattern);
 }
 
 export function profileMeta(profile: Pick<Profile, 'since' | 'categories'>): string {

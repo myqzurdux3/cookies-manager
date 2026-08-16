@@ -3,7 +3,15 @@ import { send } from '../../core/messages';
 import type { Settings } from '../../core/settings';
 import type { Category, Profile } from '../../core/types';
 import type { Row } from '../labels';
-import { needsExtraConfirmation, previewRow, profileMeta, reportRow } from '../labels';
+import {
+  formatRunSummary,
+  needsExtraConfirmation,
+  previewRow,
+  profileMeta,
+  protectedSites,
+  reportRow,
+  runSummary,
+} from '../labels';
 
 const OPTIONAL: Partial<Record<Category, chrome.runtime.ManifestPermissions>> = {
   history: 'history',
@@ -23,6 +31,10 @@ const confirmBtn = document.querySelector<HTMLButtonElement>('#confirm')!;
 const cancelBtn = document.querySelector<HTMLButtonElement>('#cancel')!;
 const vaultEl = document.querySelector<HTMLLabelElement>('#vault')!;
 const passphraseInput = document.querySelector<HTMLInputElement>('#passphrase')!;
+const summaryEl = document.querySelector<HTMLParagraphElement>('#report-summary')!;
+const sparedEl = document.querySelector<HTMLElement>('#spared')!;
+const sparedList = document.querySelector<HTMLUListElement>('#spared-list')!;
+const doneBtn = document.querySelector<HTMLButtonElement>('#done')!;
 
 let selected: Profile | null = null;
 let settings: Settings = { vaultEnabled: false, vaultRetentionDays: 7 };
@@ -111,17 +123,37 @@ confirmBtn.addEventListener('click', async () => {
     return;
   }
 
+  const profile = selected;
   confirmBtn.disabled = true;
   const results = (await send({
     type: 'CLEAN',
-    profileId: selected.id,
+    profileId: profile.id,
     passphrase: needsPassphrase ? passphraseInput.value : undefined,
   })) as CategoryResult[];
+
   passphraseInput.value = '';
   previewEl.hidden = true;
-  chooserEl.hidden = false;
+
+  summaryEl.textContent = formatRunSummary(runSummary(results));
   renderRows(reportList, results.map(reportRow));
+
+  const spared = protectedSites(profile);
+  sparedEl.hidden = spared.length === 0;
+  sparedList.replaceChildren(
+    ...spared.map((pattern) => {
+      const li = document.createElement('li');
+      li.textContent = pattern;
+      return li;
+    }),
+  );
+
   reportEl.hidden = false;
+});
+
+doneBtn.addEventListener('click', () => {
+  reportEl.hidden = true;
+  chooserEl.hidden = false;
+  selected = null;
 });
 
 async function init(): Promise<void> {

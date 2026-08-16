@@ -68,7 +68,7 @@ function renderUnfilterableNote(): void {
 function renderKeeplist(): void {
   const header = document.createElement('tr');
   const siteHead = document.createElement('th');
-  siteHead.textContent = 'Site';
+  siteHead.textContent = 'Site conservé';
   header.append(siteHead);
 
   for (const column of COLUMNS) {

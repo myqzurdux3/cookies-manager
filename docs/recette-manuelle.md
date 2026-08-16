@@ -68,6 +68,15 @@ Attendu : les réglages sont refusés avec un message sur la rétention.
 
 Attendu : la popup refuse et annonce que rien n'a été supprimé.
 
+## Scénario 5 quater — le récap dit ce qui est parti
+
+1. Lancer un nettoyage sur un profil incluant cookies, historique et cache HTTP,
+   avec au moins un site dans la keep-list.
+
+Attendu : le bandeau de total additionne les suppressions, le cache HTTP
+s'affiche « vidé entièrement » et non « 0 supprimé », et les sites protégés
+apparaissent en pastilles sous « Sites épargnés ».
+
 ## Scénario 6 — le journal enregistre
 
 1. Après un nettoyage, ouvrir la console du service worker.
