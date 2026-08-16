@@ -4,6 +4,12 @@ import type { Profile, Since, Category } from './types';
 export interface StorageArea {
   get(key: string): Promise<Record<string, unknown>>;
   set(items: Record<string, unknown>): Promise<void>;
+  /**
+   * `chrome.storage.local` sérialise en JSON : écrire `undefined` laisse la clé
+   * intacte au lieu de l'effacer. Toute suppression réelle passe donc par
+   * `remove`. Optionnel pour rester compatible avec les aires de test.
+   */
+  remove?(key: string): Promise<void>;
 }
 
 const KEY = 'profiles';

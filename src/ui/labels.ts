@@ -1,4 +1,5 @@
 import type { CategoryResult, PreviewResult } from '../core/engine';
+import type { VaultSummary } from '../core/vault';
 import type { Category } from '../core/types';
 
 export const CATEGORY_LABELS: Record<Category, string> = {
@@ -33,4 +34,14 @@ export function formatReport(result: CategoryResult): string {
 
 export function needsExtraConfirmation(categories: Category[]): boolean {
   return categories.includes('passwords') || categories.includes('formData');
+}
+
+/**
+ * Résume le coffre sans jamais toucher à son contenu : nombre de cookies,
+ * domaines et date. Aucune valeur de cookie ne transite par cette fonction.
+ */
+export function formatVaultState(summary: VaultSummary | null, formatDate: (at: number) => string): string {
+  if (summary === null) return 'Aucun coffre enregistré.';
+  const domains = summary.domains.length;
+  return `Coffre du ${formatDate(summary.createdAt)} : ${summary.cookieCount} cookie(s) sur ${domains} domaine(s).`;
 }

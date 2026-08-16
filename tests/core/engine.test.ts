@@ -92,6 +92,55 @@ describe('createEngine', () => {
     expect(journal[0]).toMatchObject({ profileId: 'p1', at: 1234 });
   });
 
+  it('sauvegarde les cookies avant de lancer le cleaner cookies', async () => {
+    const order: string[] = [];
+    const engine = createEngine(
+      [fakeCleaner('cookies', order), fakeCleaner('history', order)],
+      fakeArea(),
+      {
+        async backup() {
+          order.push('backup');
+        },
+      },
+    );
+    await engine.clean(plan, 1000);
+    expect(order).toEqual(['backup', 'cookies', 'history']);
+  });
+
+  it('renonce à supprimer les cookies quand la sauvegarde échoue', async () => {
+    const order: string[] = [];
+    const engine = createEngine(
+      [fakeCleaner('cookies', order), fakeCleaner('history', order)],
+      fakeArea(),
+      {
+        async backup() {
+          throw new Error('trousseau indisponible');
+        },
+      },
+    );
+    const results = await engine.clean(plan, 1000);
+    expect(results[0]!.report).toMatchObject({ status: 'failed', deleted: 0 });
+    expect(results[0]!.report.error).toMatch(/sauvegarde impossible.*trousseau indisponible/i);
+    expect(order).toEqual(['history']);
+    expect(results[1]!.report.status).toBe('ok');
+  });
+
+  it('ne sauvegarde rien quand le plan ne touche pas aux cookies', async () => {
+    const order: string[] = [];
+    const historyOnly: Plan = {
+      profileId: 'p1',
+      since: 0,
+      categories: [{ category: 'history', since: 0, keepRules: [] }],
+    };
+    const engine = createEngine([fakeCleaner('history', order)], fakeArea(), {
+      async backup() {
+        order.push('backup');
+      },
+    });
+    await engine.clean(historyOnly, 1000);
+    expect(order).toEqual(['history']);
+  });
+
   it('garde le plus récent en tête et plafonne le journal', async () => {
     const area = fakeArea({
       runs: Array.from({ length: JOURNAL_LIMIT }, (_, i) => ({ profileId: `old${i}`, at: i, results: [] })),

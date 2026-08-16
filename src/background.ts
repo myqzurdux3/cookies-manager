@@ -1,21 +1,73 @@
 import { createEngine } from './core/engine';
 import type { Message, Response } from './core/messages';
 import { buildPlan } from './core/planner';
+import type { CategoryPlan } from './core/planner';
 import { createProfileStore } from './core/profiles';
+import { createSettingsStore } from './core/settings';
+import { createVault } from './core/vault';
+import type { StoredCookie } from './core/vault';
 import { buildCleaners, collectKnownHosts } from './cleaners/index';
 import type { ChromeLike } from './cleaners/index';
+import { cookieUrl, deletableCookies } from './cleaners/cookies';
 
 const api = chrome as unknown as ChromeLike;
-const store = createProfileStore(chrome.storage.local);
-const engine = createEngine(
-  buildCleaners(api, () => collectKnownHosts(api)),
-  chrome.storage.local,
-);
+const area = chrome.storage.local;
+const store = createProfileStore(area);
+const settingsStore = createSettingsStore(area);
+const vault = createVault(crypto, area);
+
+/**
+ * La phrase secrète ne vit que le temps d'une purge : elle arrive par message
+ * depuis la popup, sert à dériver la clé, et n'est jamais persistée.
+ */
+let pendingPassphrase: string | null = null;
+
+async function backupCookies(categoryPlan: CategoryPlan): Promise<void> {
+  if (pendingPassphrase === null) {
+    throw new Error('phrase secrète absente alors que le coffre est actif');
+  }
+  const cookies = await api.cookies.getAll({});
+  const condemned: StoredCookie[] = deletableCookies(cookies, categoryPlan).map((cookie) => ({
+    name: cookie.name,
+    domain: cookie.domain,
+    path: cookie.path,
+    secure: cookie.secure,
+    value: cookie.value,
+    storeId: cookie.storeId,
+  }));
+  await vault.store(condemned, pendingPassphrase, Date.now());
+}
+
+const engine = createEngine(buildCleaners(api, () => collectKnownHosts(api)), area, {
+  backup: async (categoryPlan) => {
+    const settings = await settingsStore.get();
+    if (!settings.vaultEnabled) return;
+    await backupCookies(categoryPlan);
+  },
+});
 
 async function profileById(id: string) {
   const profile = (await store.list()).find((candidate) => candidate.id === id);
   if (profile === undefined) throw new Error(`profil introuvable : ${id}`);
   return profile;
+}
+
+async function restore(passphrase: string): Promise<number> {
+  const cookies = await vault.read(passphrase);
+  let restored = 0;
+  for (const cookie of cookies) {
+    await chrome.cookies.set({
+      url: cookieUrl(cookie),
+      name: cookie.name,
+      value: cookie.value,
+      domain: cookie.domain,
+      path: cookie.path,
+      secure: cookie.secure,
+      storeId: cookie.storeId,
+    });
+    restored += 1;
+  }
+  return restored;
 }
 
 async function handle(message: Message): Promise<unknown> {
@@ -30,7 +82,14 @@ async function handle(message: Message): Promise<unknown> {
       return engine.preview(buildPlan(await profileById(message.profileId), Date.now()));
     case 'CLEAN': {
       const now = Date.now();
-      return engine.clean(buildPlan(await profileById(message.profileId), now), now);
+      const settings = await settingsStore.get();
+      await vault.purgeExpired(now, settings.vaultRetentionDays);
+      pendingPassphrase = message.passphrase ?? null;
+      try {
+        return await engine.clean(buildPlan(await profileById(message.profileId), now), now);
+      } finally {
+        pendingPassphrase = null;
+      }
     }
     case 'JOURNAL':
       return engine.journal();
@@ -38,6 +97,16 @@ async function handle(message: Message): Promise<unknown> {
       return store.exportJson();
     case 'IMPORT':
       return store.importJson(message.json);
+    case 'GET_SETTINGS':
+      return settingsStore.get();
+    case 'SAVE_SETTINGS':
+      return settingsStore.save(message.settings);
+    case 'VAULT_DESCRIBE':
+      return vault.describe();
+    case 'VAULT_RESTORE':
+      return restore(message.passphrase);
+    case 'VAULT_CLEAR':
+      return vault.clear();
   }
 }
 

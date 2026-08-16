@@ -1,7 +1,9 @@
 import { send } from '../../core/messages';
+import type { Settings } from '../../core/settings';
 import { ALL_CATEGORIES } from '../../core/types';
 import type { Profile, Since } from '../../core/types';
-import { CATEGORY_LABELS } from '../labels';
+import type { VaultSummary } from '../../core/vault';
+import { CATEGORY_LABELS, formatVaultState } from '../labels';
 import { cellState, toggleRule } from './grid';
 
 const select = document.querySelector<HTMLSelectElement>('#profile-select')!;
@@ -155,4 +157,63 @@ document.querySelector('#import')!.addEventListener('click', async () => {
   }
 });
 
+// --- Coffre de cookies ---
+
+const vaultEnabled = document.querySelector<HTMLInputElement>('#vault-enabled')!;
+const vaultRetention = document.querySelector<HTMLInputElement>('#vault-retention')!;
+const vaultState = document.querySelector<HTMLParagraphElement>('#vault-state')!;
+const vaultPassphrase = document.querySelector<HTMLInputElement>('#vault-passphrase')!;
+
+async function refreshVaultState(): Promise<void> {
+  const summary = (await send({ type: 'VAULT_DESCRIBE' })) as VaultSummary | null;
+  vaultState.textContent = formatVaultState(summary, (at) => new Date(at).toLocaleString('fr-FR'));
+}
+
+async function loadSettings(): Promise<void> {
+  const settings = (await send({ type: 'GET_SETTINGS' })) as Settings;
+  vaultEnabled.checked = settings.vaultEnabled;
+  vaultRetention.value = String(settings.vaultRetentionDays);
+  await refreshVaultState();
+}
+
+document.querySelector('#save-settings')!.addEventListener('click', async () => {
+  try {
+    await send({
+      type: 'SAVE_SETTINGS',
+      settings: {
+        vaultEnabled: vaultEnabled.checked,
+        vaultRetentionDays: Number(vaultRetention.value),
+      },
+    });
+    say('Réglages enregistrés.');
+  } catch (cause) {
+    say(`Réglages refusés : ${cause instanceof Error ? cause.message : String(cause)}`);
+  }
+});
+
+document.querySelector('#vault-restore')!.addEventListener('click', async () => {
+  if (vaultPassphrase.value === '') {
+    say('Phrase secrète requise pour restaurer.');
+    return;
+  }
+  try {
+    const restored = (await send({
+      type: 'VAULT_RESTORE',
+      passphrase: vaultPassphrase.value,
+    })) as number;
+    say(`${restored} cookie(s) restauré(s). Vos sessions sont de nouveau actives.`);
+  } catch (cause) {
+    say(`Restauration refusée : ${cause instanceof Error ? cause.message : String(cause)}`);
+  } finally {
+    vaultPassphrase.value = '';
+  }
+});
+
+document.querySelector('#vault-clear')!.addEventListener('click', async () => {
+  await send({ type: 'VAULT_CLEAR' });
+  say('Coffre supprimé.');
+  await refreshVaultState();
+});
+
 void reload();
+void loadSettings();

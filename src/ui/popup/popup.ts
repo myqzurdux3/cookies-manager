@@ -1,5 +1,6 @@
 import type { CategoryResult, PreviewResult } from '../../core/engine';
 import { send } from '../../core/messages';
+import type { Settings } from '../../core/settings';
 import type { Category, Profile } from '../../core/types';
 import { formatPreview, formatReport, needsExtraConfirmation } from '../labels';
 
@@ -18,8 +19,11 @@ const dangerEl = document.querySelector<HTMLLabelElement>('#danger')!;
 const dangerCheck = document.querySelector<HTMLInputElement>('#danger-check')!;
 const confirmBtn = document.querySelector<HTMLButtonElement>('#confirm')!;
 const cancelBtn = document.querySelector<HTMLButtonElement>('#cancel')!;
+const vaultEl = document.querySelector<HTMLLabelElement>('#vault')!;
+const passphraseInput = document.querySelector<HTMLInputElement>('#passphrase')!;
 
 let selected: Profile | null = null;
+let settings: Settings = { vaultEnabled: false, vaultRetentionDays: 7 };
 
 async function ensurePermissions(profile: Profile): Promise<boolean> {
   const needed = profile.categories
@@ -57,6 +61,8 @@ async function showPreview(profile: Profile): Promise<void> {
   dangerEl.hidden = !risky;
   dangerCheck.checked = false;
   confirmBtn.disabled = risky;
+  vaultEl.hidden = !(settings.vaultEnabled && profile.categories.includes('cookies'));
+  passphraseInput.value = '';
   previewEl.hidden = false;
 }
 
@@ -71,14 +77,27 @@ cancelBtn.addEventListener('click', () => {
 
 confirmBtn.addEventListener('click', async () => {
   if (selected === null) return;
+
+  const needsPassphrase = !vaultEl.hidden;
+  if (needsPassphrase && passphraseInput.value === '') {
+    render(previewList, ['Phrase secrète requise : le coffre est actif, rien n’a été supprimé.']);
+    return;
+  }
+
   confirmBtn.disabled = true;
-  const results = (await send({ type: 'CLEAN', profileId: selected.id })) as CategoryResult[];
+  const results = (await send({
+    type: 'CLEAN',
+    profileId: selected.id,
+    passphrase: needsPassphrase ? passphraseInput.value : undefined,
+  })) as CategoryResult[];
+  passphraseInput.value = '';
   previewEl.hidden = true;
   render(reportList, results.map(formatReport));
   reportEl.hidden = false;
 });
 
 async function init(): Promise<void> {
+  settings = (await send({ type: 'GET_SETTINGS' })) as Settings;
   const profiles = (await send({ type: 'LIST_PROFILES' })) as Profile[];
   profilesEl.replaceChildren(
     ...profiles.map((profile) => {

@@ -23,6 +23,17 @@ function isDeletable(cookie: chrome.cookies.Cookie, plan: CategoryPlan): boolean
   return !protection.names.has(cookie.name);
 }
 
+/**
+ * Les cookies que ce plan supprimerait. Exporté pour que le coffre sauvegarde
+ * exactement ce qui va disparaître, sans dupliquer la règle de sélection.
+ */
+export function deletableCookies(
+  cookies: chrome.cookies.Cookie[],
+  plan: CategoryPlan,
+): chrome.cookies.Cookie[] {
+  return cookies.filter((cookie) => isDeletable(cookie, plan));
+}
+
 export function createCookiesCleaner(api: CookiesApi): Cleaner {
   return {
     id: 'cookies',

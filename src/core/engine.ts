@@ -1,4 +1,4 @@
-import type { Plan } from './planner';
+import type { CategoryPlan, Plan } from './planner';
 import type { StorageArea } from './profiles';
 import type { Category, CleanReport, Cleaner, Preview } from './types';
 
@@ -24,7 +24,21 @@ function missing(category: Category): CleanReport {
   };
 }
 
-export function createEngine(cleaners: Cleaner[], area: StorageArea): Engine {
+export type EngineOptions = {
+  /**
+   * Sauvegarde des cookies condamnés, appelée juste avant le cleaner cookies.
+   * Si elle jette, les cookies ne sont pas supprimés : jamais de suppression
+   * sans la sauvegarde promise. Seuls les cookies sont concernés — les autres
+   * catégories ne sont pas relisibles avant suppression.
+   */
+  backup?: (plan: CategoryPlan) => Promise<void>;
+};
+
+export function createEngine(
+  cleaners: Cleaner[],
+  area: StorageArea,
+  options: EngineOptions = {},
+): Engine {
   const byId = new Map(cleaners.map((cleaner) => [cleaner.id, cleaner]));
 
   return {
@@ -63,6 +77,24 @@ export function createEngine(cleaners: Cleaner[], area: StorageArea): Engine {
           results.push({ category: categoryPlan.category, report: missing(categoryPlan.category) });
           continue;
         }
+        if (categoryPlan.category === 'cookies' && options.backup !== undefined) {
+          try {
+            await options.backup(categoryPlan);
+          } catch (cause) {
+            const reason = cause instanceof Error ? cause.message : String(cause);
+            results.push({
+              category: categoryPlan.category,
+              report: {
+                status: 'failed',
+                deleted: 0,
+                kept: 0,
+                error: `sauvegarde impossible, cookies conservés : ${reason}`,
+              },
+            });
+            continue;
+          }
+        }
+
         try {
           results.push({ category: categoryPlan.category, report: await cleaner.clean(categoryPlan) });
         } catch (cause) {

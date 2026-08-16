@@ -3,6 +3,7 @@ import {
   CATEGORY_LABELS,
   formatPreview,
   formatReport,
+  formatVaultState,
   needsExtraConfirmation,
 } from '../../src/ui/labels';
 import { ALL_CATEGORIES } from '../../src/core/types';
@@ -58,6 +59,23 @@ describe('formatReport', () => {
         report: { status: 'failed', deleted: 0, kept: 0, error: 'permission refusée' },
       }),
     ).toBe('Mots de passe : échec — permission refusée');
+  });
+});
+
+describe('formatVaultState', () => {
+  const stamp = (at: number) => `date(${at})`;
+
+  it('annonce un coffre absent', () => {
+    expect(formatVaultState(null, stamp)).toBe('Aucun coffre enregistré.');
+  });
+
+  it('résume un coffre existant', () => {
+    expect(
+      formatVaultState(
+        { version: 1, createdAt: 42, cookieCount: 3, domains: ['.github.com', '.example.com'] },
+        stamp,
+      ),
+    ).toBe('Coffre du date(42) : 3 cookie(s) sur 2 domaine(s).');
   });
 });
 
