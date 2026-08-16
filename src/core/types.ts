@@ -40,3 +40,25 @@ export type Profile = {
   categories: Category[];
   keepRules: KeepRule[];
 };
+
+import type { CategoryPlan } from './planner';
+
+export type Preview = {
+  countable: boolean;
+  items: number;
+  note?: string;
+};
+
+export type CleanReport = {
+  status: 'ok' | 'partial' | 'failed';
+  deleted: number;
+  kept: number;
+  error?: string;
+};
+
+export interface Cleaner {
+  id: Category;
+  perSite: 'exact' | 'origin' | 'none';
+  preview(plan: CategoryPlan): Promise<Preview>;
+  clean(plan: CategoryPlan): Promise<CleanReport>;
+}
