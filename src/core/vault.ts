@@ -17,6 +17,11 @@ const SALT_BYTES = 16;
 const IV_BYTES = 12;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Instantané d'un cookie. Les champs optionnels ont été ajoutés après la
+ * première version du coffre : un coffre écrit avant leur ajout reste lisible,
+ * la restauration retombant sur les valeurs par défaut du navigateur.
+ */
 export type StoredCookie = {
   name: string;
   domain: string;
@@ -24,6 +29,11 @@ export type StoredCookie = {
   secure: boolean;
   value: string;
   storeId?: string;
+  hostOnly?: boolean;
+  httpOnly?: boolean;
+  sameSite?: chrome.cookies.SameSiteStatus;
+  session?: boolean;
+  expirationDate?: number;
 };
 
 export type VaultRecord = {

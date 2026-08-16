@@ -6,9 +6,11 @@ import { createProfileStore } from './core/profiles';
 import { createSettingsStore } from './core/settings';
 import { createVault } from './core/vault';
 import type { StoredCookie } from './core/vault';
+import { restoreDetails } from './core/restore';
+import type { RestoreFailure, RestoreReport } from './core/restore';
 import { buildCleaners, collectKnownHosts } from './cleaners/index';
 import type { ChromeLike } from './cleaners/index';
-import { cookieUrl, deletableCookies } from './cleaners/cookies';
+import { deletableCookies } from './cleaners/cookies';
 
 const api = chrome as unknown as ChromeLike;
 const area = chrome.storage.local;
@@ -34,6 +36,11 @@ async function backupCookies(categoryPlan: CategoryPlan): Promise<void> {
     secure: cookie.secure,
     value: cookie.value,
     storeId: cookie.storeId,
+    hostOnly: cookie.hostOnly,
+    httpOnly: cookie.httpOnly,
+    sameSite: cookie.sameSite,
+    session: cookie.session,
+    expirationDate: cookie.expirationDate,
   }));
   await vault.store(condemned, pendingPassphrase, Date.now());
 }
@@ -52,22 +59,29 @@ async function profileById(id: string) {
   return profile;
 }
 
-async function restore(passphrase: string): Promise<number> {
+/**
+ * Un cookie refusé par le navigateur ne doit pas emporter toute la restauration :
+ * on rapporte les échecs au lieu d'interrompre la boucle.
+ */
+async function restore(passphrase: string): Promise<RestoreReport> {
   const cookies = await vault.read(passphrase);
+  const failures: RestoreFailure[] = [];
   let restored = 0;
+
   for (const cookie of cookies) {
-    await chrome.cookies.set({
-      url: cookieUrl(cookie),
-      name: cookie.name,
-      value: cookie.value,
-      domain: cookie.domain,
-      path: cookie.path,
-      secure: cookie.secure,
-      storeId: cookie.storeId,
-    });
-    restored += 1;
+    try {
+      await chrome.cookies.set(restoreDetails(cookie));
+      restored += 1;
+    } catch (cause) {
+      failures.push({
+        name: cookie.name,
+        domain: cookie.domain,
+        error: cause instanceof Error ? cause.message : String(cause),
+      });
+    }
   }
-  return restored;
+
+  return { restored, failures };
 }
 
 async function handle(message: Message): Promise<unknown> {

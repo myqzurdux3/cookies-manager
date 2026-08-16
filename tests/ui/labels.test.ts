@@ -3,6 +3,7 @@ import {
   CATEGORY_LABELS,
   formatPreview,
   formatReport,
+  formatRestoreReport,
   formatVaultState,
   needsExtraConfirmation,
 } from '../../src/ui/labels';
@@ -59,6 +60,26 @@ describe('formatReport', () => {
         report: { status: 'failed', deleted: 0, kept: 0, error: 'permission refusée' },
       }),
     ).toBe('Mots de passe : échec — permission refusée');
+  });
+});
+
+describe('formatRestoreReport', () => {
+  it('annonce une restauration complète', () => {
+    expect(formatRestoreReport({ restored: 5, failures: [] })).toBe(
+      '5 cookie(s) restauré(s). Vos sessions sont de nouveau actives.',
+    );
+  });
+
+  it('rapporte les cookies refusés sans masquer les réussites', () => {
+    const message = formatRestoreReport({
+      restored: 4,
+      failures: [
+        { name: '__Host-device_id', domain: '.claude.ai', error: 'Failed to parse or set cookie' },
+      ],
+    });
+    expect(message).toMatch(/^4 cookie\(s\) restauré\(s\)\./);
+    expect(message).toMatch(/1 refusé\(s\)/);
+    expect(message).toMatch(/__Host-device_id/);
   });
 });
 

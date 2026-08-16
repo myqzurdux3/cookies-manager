@@ -24,6 +24,84 @@ const sample: Profile = {
   keepRules: [{ pattern: 'github.com', keep: { cookies: true } }],
 };
 
+describe('normalisation des motifs à l’enregistrement', () => {
+  it('corrige un motif mal formé au lieu de le garder inerte', async () => {
+    const store = createProfileStore(fakeArea());
+    await store.save({
+      id: 'p1',
+      name: 'Test',
+      since: 'all',
+      categories: ['cookies'],
+      keepRules: [{ pattern: '*google.com', keep: { cookies: true } }],
+    });
+    const saved = (await store.list()).find((p) => p.id === 'p1')!;
+    expect(saved.keepRules[0]!.pattern).toBe('*.google.com');
+  });
+
+  it('refuse un motif impossible à normaliser', async () => {
+    const store = createProfileStore(fakeArea());
+    await expect(
+      store.save({
+        id: 'p1',
+        name: 'Test',
+        since: 'all',
+        categories: ['cookies'],
+        keepRules: [{ pattern: 'git*hub.com', keep: { cookies: true } }],
+      }),
+    ).rejects.toThrow(/motif/i);
+  });
+
+  it('répare à la lecture un motif inerte déjà enregistré', async () => {
+    const store = createProfileStore(
+      fakeArea({
+        profiles: [
+          {
+            id: 'p1',
+            name: 'Ancien',
+            since: 'all',
+            categories: ['cookies'],
+            keepRules: [{ pattern: '*google.com', keep: { cookies: true } }],
+          },
+        ],
+      }),
+    );
+    expect((await store.list())[0]!.keepRules[0]!.pattern).toBe('*.google.com');
+  });
+
+  it('laisse passer un motif irrécupérable au lieu de rendre la liste illisible', async () => {
+    const store = createProfileStore(
+      fakeArea({
+        profiles: [
+          {
+            id: 'p1',
+            name: 'Ancien',
+            since: 'all',
+            categories: ['cookies'],
+            keepRules: [{ pattern: 'git*hub.com', keep: { cookies: true } }],
+          },
+        ],
+      }),
+    );
+    expect((await store.list())[0]!.keepRules[0]!.pattern).toBe('git*hub.com');
+  });
+
+  it('corrige aussi les motifs d’un import', async () => {
+    const store = createProfileStore(fakeArea());
+    await store.importJson(
+      JSON.stringify([
+        {
+          id: 'p1',
+          name: 'Test',
+          since: 'all',
+          categories: ['cookies'],
+          keepRules: [{ pattern: '.claude.ai', keep: { cookies: true } }],
+        },
+      ]),
+    );
+    expect((await store.list())[0]!.keepRules[0]!.pattern).toBe('*.claude.ai');
+  });
+});
+
 describe('createProfileStore', () => {
   it('rend les profils par défaut quand le stockage est vide', async () => {
     const store = createProfileStore(fakeArea());

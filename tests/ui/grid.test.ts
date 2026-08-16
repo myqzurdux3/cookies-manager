@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PER_SITE, cellState, toggleRule } from '../../src/ui/options/grid';
+import { PER_SITE, cellState, removeRule, toggleRule } from '../../src/ui/options/grid';
 import { ALL_CATEGORIES } from '../../src/core/types';
 import type { KeepRule } from '../../src/core/types';
 
@@ -25,6 +25,29 @@ describe('cellState', () => {
 
   it('laisse une catégorie exclusible modifiable', () => {
     expect(cellState('cookies', false).disabled).toBe(false);
+  });
+});
+
+describe('removeRule', () => {
+  it('retire la ligne visée', () => {
+    const initial: KeepRule[] = [
+      { pattern: 'github.com', keep: { cookies: true } },
+      { pattern: 'example.com', keep: { history: true } },
+    ];
+    expect(removeRule(initial, 'github.com')).toEqual([
+      { pattern: 'example.com', keep: { history: true } },
+    ]);
+  });
+
+  it('ignore un motif absent', () => {
+    const initial: KeepRule[] = [{ pattern: 'github.com', keep: { cookies: true } }];
+    expect(removeRule(initial, 'inconnu.com')).toEqual(initial);
+  });
+
+  it("ne modifie pas le tableau d'origine", () => {
+    const initial: KeepRule[] = [{ pattern: 'github.com', keep: { cookies: true } }];
+    removeRule(initial, 'github.com');
+    expect(initial).toHaveLength(1);
   });
 });
 

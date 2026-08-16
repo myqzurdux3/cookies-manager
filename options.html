@@ -34,10 +34,13 @@
         catégories que l'API navigateur ne sait pas exclure par site.
       </p>
       <table id="keeplist"></table>
-      <input type="text" id="new-pattern" placeholder="exemple.com" />
+      <input type="text" id="new-pattern" placeholder="exemple.com ou *.exemple.com" />
       <button id="add-pattern" type="button">Ajouter un site</button>
 
-      <button type="submit">Enregistrer</button>
+      <div class="actions">
+        <button type="submit">Enregistrer le profil</button>
+        <span class="hint">Les modifications ci-dessus ne sont appliquées qu'après enregistrement.</span>
+      </div>
     </form>
 
     <h2>Coffre de cookies</h2>

@@ -8,6 +8,24 @@ th:first-child, td:first-child { text-align: left; }
 input[disabled] { cursor: not-allowed; }
 td.disabled { background: #f5f5f5; }
 .hint { color: #555; font-size: 12px; }
+
+/* Le formulaire est long : sans cette barre, le bouton d'enregistrement se
+   retrouve sous la grille et passe inaperçu. */
+.actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  margin-top: 16px;
+  background: Canvas;
+  border-top: 1px solid #ddd;
+}
+
+.actions button { font-weight: 600; padding: 6px 14px; }
+#keeplist td:last-child button { color: #a00; border: none; background: none; cursor: pointer; font-size: 14px; }
+#keeplist td:last-child button:hover { background: #fee; border-radius: 4px; }
 .warning { border-left: 3px solid #a00; padding-left: 10px; color: #700; font-size: 13px; }
 #vault-state { font-size: 13px; color: #333; }
 textarea { display: block; width: 100%; height: 120px; margin: 8px 0; font-family: monospace; }

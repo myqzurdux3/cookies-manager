@@ -2,9 +2,11 @@ import { send } from '../../core/messages';
 import type { Settings } from '../../core/settings';
 import { ALL_CATEGORIES } from '../../core/types';
 import type { Profile, Since } from '../../core/types';
+import type { RestoreReport } from '../../core/restore';
 import type { VaultSummary } from '../../core/vault';
-import { CATEGORY_LABELS, formatVaultState } from '../labels';
-import { cellState, toggleRule } from './grid';
+import { CATEGORY_LABELS, formatRestoreReport, formatVaultState } from '../labels';
+import { normalizePattern } from '../../core/patterns';
+import { cellState, removeRule, toggleRule } from './grid';
 
 const select = document.querySelector<HTMLSelectElement>('#profile-select')!;
 const nameInput = document.querySelector<HTMLInputElement>('#name')!;
@@ -54,6 +56,9 @@ function renderKeeplist(): void {
     th.textContent = CATEGORY_LABELS[category];
     header.append(th);
   }
+  const removeHeader = document.createElement('th');
+  removeHeader.textContent = 'Retirer';
+  header.append(removeHeader);
 
   const rows = current!.keepRules.map((rule) => {
     const tr = document.createElement('tr');
@@ -78,6 +83,20 @@ function renderKeeplist(): void {
       td.append(input);
       tr.append(td);
     }
+
+    const removeCell = document.createElement('td');
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = '✕';
+    removeBtn.title = `Retirer ${rule.pattern} de la liste des sites conservés`;
+    removeBtn.addEventListener('click', () => {
+      current!.keepRules = removeRule(current!.keepRules, rule.pattern);
+      renderKeeplist();
+      say(`${rule.pattern} retiré. Pensez à enregistrer le profil.`);
+    });
+    removeCell.append(removeBtn);
+    tr.append(removeCell);
+
     return tr;
   });
 
@@ -124,12 +143,27 @@ document.querySelector('#delete-profile')!.addEventListener('click', async () =>
 });
 
 document.querySelector('#add-pattern')!.addEventListener('click', () => {
-  const pattern = newPattern.value.trim();
-  if (pattern === '' || current === null) return;
-  if (current.keepRules.some((rule) => rule.pattern === pattern)) return;
-  current.keepRules = [...current.keepRules, { pattern, keep: { cookies: true } }];
+  if (current === null) return;
+
+  const result = normalizePattern(newPattern.value);
+  if (!result.ok) {
+    say(`Motif refusé : ${result.reason}`);
+    return;
+  }
+
+  if (current.keepRules.some((rule) => rule.pattern === result.pattern)) {
+    say(`${result.pattern} est déjà dans la liste.`);
+    return;
+  }
+
+  current.keepRules = [...current.keepRules, { pattern: result.pattern, keep: { cookies: true } }];
   newPattern.value = '';
   renderKeeplist();
+  say(
+    result.changed
+      ? `Ajouté sous la forme ${result.pattern} — un wildcard s'écrit *.exemple.com. Pensez à enregistrer.`
+      : `${result.pattern} ajouté. Pensez à enregistrer le profil.`,
+  );
 });
 
 document.querySelector<HTMLFormElement>('#editor')!.addEventListener('submit', async (event) => {
@@ -197,11 +231,11 @@ document.querySelector('#vault-restore')!.addEventListener('click', async () => 
     return;
   }
   try {
-    const restored = (await send({
+    const report = (await send({
       type: 'VAULT_RESTORE',
       passphrase: vaultPassphrase.value,
-    })) as number;
-    say(`${restored} cookie(s) restauré(s). Vos sessions sont de nouveau actives.`);
+    })) as RestoreReport;
+    say(formatRestoreReport(report));
   } catch (cause) {
     say(`Restauration refusée : ${cause instanceof Error ? cause.message : String(cause)}`);
   } finally {

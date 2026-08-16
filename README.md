@@ -21,6 +21,23 @@ empaquetée » → choisir `dist/`.
 | `npm run typecheck` | Vérification TypeScript |
 | `npm run build` | Produit `dist/` |
 
+## Syntaxe des motifs de keep-list
+
+| Vous tapez | Enregistré comme | Couvre |
+|---|---|---|
+| `github.com` | `github.com` | cet hôte exactement, plus ses cookies de domaine `.github.com` |
+| `*.github.com` | `*.github.com` | `github.com` et tous ses sous-domaines |
+| `*google.com` | `*.google.com` | corrigé : le point manquant est ajouté |
+| `.claude.ai` | `*.claude.ai` | corrigé : un point de tête vaut wildcard |
+| `https://github.com/x` | `github.com` | corrigé : seul l'hôte est retenu |
+| `*` | `*` | tous les sites |
+
+`*google.com` n'est **pas** interprété comme un suffixe littéral : cela couvrirait
+aussi `evilgoogle.com`, transformant une faute de frappe en faille. Les motifs
+impossibles à corriger (`git*hub.com`, espaces, motif vide) sont refusés à la
+saisie avec la raison. Les profils enregistrés avant cette règle sont réparés au
+chargement.
+
 ## Ce que l'API navigateur ne permet pas
 
 Trois limites viennent de Chrome, pas de cette extension :
@@ -59,6 +76,9 @@ La clé n'est jamais enregistrée, le coffre vit dans `chrome.storage.local`.
   suppression sans la sauvegarde promise.
 - Seuls les cookies sont sauvegardés. Les autres catégories ne sont pas
   relisibles avant suppression.
+- Certains cookies peuvent être refusés à la restauration par le navigateur
+  lui-même (règles de préfixe, origine devenue invalide). Les refus sont
+  rapportés un par un ; ils n'interrompent pas la restauration des autres.
 
 ## Vie privée
 

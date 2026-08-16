@@ -1,3 +1,4 @@
+import { normalizePattern } from './patterns';
 import { ALL_CATEGORIES } from './types';
 import type { Profile, Since, Category } from './types';
 
@@ -102,11 +103,45 @@ function validate(value: unknown): Profile[] {
   return value as Profile[];
 }
 
+/**
+ * Un motif mal formé enregistré tel quel ne protège rien, sans le dire. Toute
+ * écriture passe donc par la normalisation : les fautes courantes sont
+ * corrigées, le reste est refusé.
+ */
+function normalizeRules(profile: Profile): Profile {
+  return {
+    ...profile,
+    keepRules: profile.keepRules.map((rule) => {
+      const result = normalizePattern(rule.pattern);
+      if (!result.ok) throw new Error(`motif refusé « ${rule.pattern} » : ${result.reason}`);
+      return { ...rule, pattern: result.pattern };
+    }),
+  };
+}
+
+/**
+ * Même correction, appliquée à la lecture : un profil enregistré avant que la
+ * normalisation existe contient peut-être un motif inerte comme `*google.com`.
+ * Le corriger au chargement évite qu'il continue de ne rien protéger en silence.
+ * Ici on ne jette jamais — un motif irrécupérable est laissé tel quel plutôt que
+ * de rendre toute la liste de profils illisible.
+ */
+function repairRules(profile: Profile): Profile {
+  return {
+    ...profile,
+    keepRules: profile.keepRules.map((rule) => {
+      const result = normalizePattern(rule.pattern);
+      return result.ok ? { ...rule, pattern: result.pattern } : rule;
+    }),
+  };
+}
+
 export function createProfileStore(area: StorageArea): ProfileStore {
   async function read(): Promise<Profile[]> {
     const stored = await area.get(KEY);
     const value = stored[KEY];
-    return value === undefined ? structuredClone(DEFAULT_PROFILES) : validate(value);
+    if (value === undefined) return structuredClone(DEFAULT_PROFILES);
+    return validate(value).map(repairRules);
   }
 
   async function write(profiles: Profile[]): Promise<void> {
@@ -117,10 +152,11 @@ export function createProfileStore(area: StorageArea): ProfileStore {
     list: read,
 
     async save(profile) {
+      const normalized = normalizeRules(profile);
       const profiles = await read();
-      const index = profiles.findIndex((p) => p.id === profile.id);
-      if (index === -1) profiles.push(profile);
-      else profiles[index] = profile;
+      const index = profiles.findIndex((p) => p.id === normalized.id);
+      if (index === -1) profiles.push(normalized);
+      else profiles[index] = normalized;
       await write(profiles);
     },
 
@@ -133,7 +169,7 @@ export function createProfileStore(area: StorageArea): ProfileStore {
     },
 
     async importJson(json) {
-      await write(validate(JSON.parse(json)));
+      await write(validate(JSON.parse(json)).map(normalizeRules));
     },
   };
 }

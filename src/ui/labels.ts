@@ -1,4 +1,5 @@
 import type { CategoryResult, PreviewResult } from '../core/engine';
+import type { RestoreReport } from '../core/restore';
 import type { VaultSummary } from '../core/vault';
 import type { Category } from '../core/types';
 
@@ -34,6 +35,15 @@ export function formatReport(result: CategoryResult): string {
 
 export function needsExtraConfirmation(categories: Category[]): boolean {
   return categories.includes('passwords') || categories.includes('formData');
+}
+
+export function formatRestoreReport(report: RestoreReport): string {
+  const base = `${report.restored} cookie(s) restauré(s).`;
+  if (report.failures.length === 0) return `${base} Vos sessions sont de nouveau actives.`;
+  const details = report.failures
+    .map((failure) => `${failure.name} (${failure.domain}) : ${failure.error}`)
+    .join(' | ');
+  return `${base} ${report.failures.length} refusé(s) par le navigateur — ${details}`;
 }
 
 /**

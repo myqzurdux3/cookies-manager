@@ -25,6 +25,10 @@ export function cellState(category: Category, checked: boolean): { disabled: boo
   };
 }
 
+export function removeRule(rules: KeepRule[], pattern: string): KeepRule[] {
+  return rules.filter((rule) => rule.pattern !== pattern);
+}
+
 export function toggleRule(
   rules: KeepRule[],
   pattern: string,
