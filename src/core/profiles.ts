@@ -1,4 +1,5 @@
-import type { Profile } from './types';
+import { ALL_CATEGORIES } from './types';
+import type { Profile, Since, Category } from './types';
 
 export interface StorageArea {
   get(key: string): Promise<Record<string, unknown>>;
@@ -43,6 +44,10 @@ export interface ProfileStore {
 
 function validate(value: unknown): Profile[] {
   if (!Array.isArray(value)) throw new Error('format de profils invalide');
+
+  const validSince = new Set<string>(['hour', 'day', 'week', 'month', 'all']);
+  const validCategories = new Set(ALL_CATEGORIES);
+
   for (const profile of value) {
     if (typeof profile?.id !== 'string' || typeof profile?.name !== 'string') {
       throw new Error('format de profils invalide');
@@ -50,9 +55,41 @@ function validate(value: unknown): Profile[] {
     if (!Array.isArray(profile.categories) || !Array.isArray(profile.keepRules)) {
       throw new Error('format de profils invalide');
     }
+
+    // Validate since
+    if (typeof profile.since !== 'string' || !validSince.has(profile.since)) {
+      throw new Error('période invalide');
+    }
+
+    // Validate categories
+    for (const category of profile.categories) {
+      if (typeof category !== 'string' || !validCategories.has(category as Category)) {
+        throw new Error('catégorie inconnue');
+      }
+    }
+
+    // Validate keepRules
     for (const rule of profile.keepRules) {
       if (typeof rule?.pattern !== 'string' || rule.pattern.trim() === '') {
         throw new Error('motif vide dans la keep-list');
+      }
+
+      // Validate keep object
+      const keep = rule.keep;
+      if (keep === null || typeof keep !== 'object' || Array.isArray(keep)) {
+        throw new Error('règle de conservation invalide');
+      }
+      for (const [key, val] of Object.entries(keep)) {
+        if (!validCategories.has(key as Category) || val !== true) {
+          throw new Error('règle de conservation invalide');
+        }
+      }
+
+      // Validate keepCookies if present
+      if ('keepCookies' in rule && rule.keepCookies !== undefined) {
+        if (!Array.isArray(rule.keepCookies) || !rule.keepCookies.every((item: unknown) => typeof item === 'string')) {
+          throw new Error('liste de cookies invalide');
+        }
       }
     }
   }
@@ -63,7 +100,7 @@ export function createProfileStore(area: StorageArea): ProfileStore {
   async function read(): Promise<Profile[]> {
     const stored = await area.get(KEY);
     const value = stored[KEY];
-    return value === undefined ? DEFAULT_PROFILES : validate(value);
+    return value === undefined ? structuredClone(DEFAULT_PROFILES) : validate(value);
   }
 
   async function write(profiles: Profile[]): Promise<void> {

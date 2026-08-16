@@ -68,6 +68,44 @@ describe('createProfileStore', () => {
     const bad = JSON.stringify([{ ...sample, keepRules: [{ pattern: '', keep: {} }] }]);
     await expect(store.importJson(bad)).rejects.toThrow('motif vide');
   });
+
+  it('ne mutate pas DEFAULT_PROFILES quand le stockage est genuinely vide', async () => {
+    // First store saves a profile to genuinely empty storage (no "profiles" key)
+    const store1 = createProfileStore(fakeArea());
+    await store1.save(sample);
+
+    // Second store over a second empty area should still get untouched defaults
+    const store2 = createProfileStore(fakeArea());
+    const defaults = await store2.list();
+    expect(defaults).toEqual(DEFAULT_PROFILES);
+    expect(defaults).toHaveLength(2);
+    expect(defaults[0]!.id).toBe('light');
+    expect(defaults[1]!.id).toBe('full');
+  });
+
+  it('rejette un profil avec période invalide', async () => {
+    const store = createProfileStore(fakeArea({ profiles: [] }));
+    const bad = JSON.stringify([{ ...sample, since: 'hier' }]);
+    await expect(store.importJson(bad)).rejects.toThrow('période invalide');
+  });
+
+  it('rejette un profil avec catégorie inconnue', async () => {
+    const store = createProfileStore(fakeArea({ profiles: [] }));
+    const bad = JSON.stringify([{ ...sample, categories: ['cookies', 'nonsense'] }]);
+    await expect(store.importJson(bad)).rejects.toThrow('catégorie inconnue');
+  });
+
+  it('rejette une règle de conservation invalide', async () => {
+    const store = createProfileStore(fakeArea({ profiles: [] }));
+    const bad = JSON.stringify([{ ...sample, keepRules: [{ pattern: 'example.com', keep: { cookies: false } }] }]);
+    await expect(store.importJson(bad)).rejects.toThrow('règle de conservation invalide');
+  });
+
+  it('rejette une liste de cookies invalide', async () => {
+    const store = createProfileStore(fakeArea({ profiles: [] }));
+    const bad = JSON.stringify([{ ...sample, keepRules: [{ pattern: 'example.com', keep: { cookies: true }, keepCookies: ['valid', 123] }] }]);
+    await expect(store.importJson(bad)).rejects.toThrow('liste de cookies invalide');
+  });
 });
 
 describe('DEFAULT_PROFILES', () => {
