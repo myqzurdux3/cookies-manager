@@ -6,70 +6,123 @@
     <link rel="stylesheet" href="/src/ui/options/options.css" />
   </head>
   <body>
-    <h1>Profils de nettoyage</h1>
-    <select id="profile-select"></select>
-    <button id="new-profile" type="button">Nouveau profil</button>
-    <button id="delete-profile" type="button">Supprimer</button>
-
-    <form id="editor">
-      <label>Nom <input type="text" id="name" required /></label>
-      <label>
-        Période
-        <select id="since">
-          <option value="hour">Dernière heure</option>
-          <option value="day">Dernier jour</option>
-          <option value="week">Dernière semaine</option>
-          <option value="month">Dernier mois</option>
-          <option value="all">Tout</option>
-        </select>
-      </label>
-
-      <h2>Catégories nettoyées</h2>
-      <div id="categories"></div>
-
-      <h2>Sites conservés</h2>
-      <p class="hint">
-        Motifs acceptés : <code>github.com</code> (hôte exact), <code>*.github.com</code>
-        (sous-domaines inclus), <code>*</code> (tous les sites). Les cases grisées correspondent aux
-        catégories que l'API navigateur ne sait pas exclure par site.
-      </p>
-      <table id="keeplist"></table>
-      <input type="text" id="new-pattern" placeholder="exemple.com ou *.exemple.com" />
-      <button id="add-pattern" type="button">Ajouter un site</button>
-
-      <div class="actions">
-        <button type="submit">Enregistrer le profil</button>
-        <span class="hint">Les modifications ci-dessus ne sont appliquées qu'après enregistrement.</span>
+    <header class="page-header">
+      <div class="brand">
+        <img class="brand-mark" src="icons/logo.svg" alt="" />
+        <span class="brand-name">Cookies Manager</span>
       </div>
-    </form>
+      <p class="hint">Suppression des données de navigation, site par site.</p>
+    </header>
 
-    <h2>Coffre de cookies</h2>
-    <p class="warning">
-      Un coffre de cookies est un coffre de jetons de session actifs : déchiffré, il permet
-      d'usurper vos sessions sans mot de passe ni second facteur. Il est chiffré par une phrase
-      secrète que vous seul connaissez, et qui n'est jamais enregistrée — <strong>une phrase oubliée
-      rend le coffre définitivement illisible</strong>. Seuls les cookies sont sauvegardés : les
-      autres catégories ne sont pas relisibles avant suppression.
-    </p>
-    <label><input type="checkbox" id="vault-enabled" /> Sauvegarder les cookies avant suppression</label>
-    <label>
-      Rétention (jours)
-      <input type="number" id="vault-retention" min="1" max="90" step="1" />
-    </label>
-    <button id="save-settings" type="button">Enregistrer les réglages</button>
-    <p id="vault-state"></p>
-    <label>
-      Phrase secrète
-      <input type="password" id="vault-passphrase" autocomplete="off" />
-    </label>
-    <button id="vault-restore" type="button">Restaurer les cookies</button>
-    <button id="vault-clear" type="button">Supprimer le coffre</button>
+    <main>
+      <section class="card">
+        <div class="card-head">
+          <h2>Profils</h2>
+          <div class="card-actions">
+            <select id="profile-select"></select>
+            <button id="new-profile" type="button">Nouveau</button>
+            <button id="delete-profile" type="button">Supprimer</button>
+          </div>
+        </div>
 
-    <h2>Sauvegarde de la configuration</h2>
-    <button id="export" type="button">Exporter en JSON</button>
-    <textarea id="import-area" placeholder="Coller un JSON de profils ici"></textarea>
-    <button id="import" type="button">Importer</button>
-    <p id="status" role="status"></p>
+        <form id="editor">
+          <div class="field-row">
+            <label class="field">
+              <span class="field-label">Nom</span>
+              <input type="text" id="name" required />
+            </label>
+            <label class="field">
+              <span class="field-label">Période</span>
+              <select id="since">
+                <option value="hour">Dernière heure</option>
+                <option value="day">Dernier jour</option>
+                <option value="week">Dernière semaine</option>
+                <option value="month">Dernier mois</option>
+                <option value="all">Tout</option>
+              </select>
+            </label>
+          </div>
+
+          <h3>Catégories nettoyées</h3>
+          <div id="categories" class="checks"></div>
+
+          <h3>Sites conservés</h3>
+          <p class="hint">
+            Motifs acceptés : <code>github.com</code> (hôte exact), <code>*.github.com</code>
+            (sous-domaines et apex inclus), <code>*</code> (tous les sites). Une saisie mal formée
+            comme <code>*google.com</code> est corrigée automatiquement.
+          </p>
+
+          <div class="table-wrap">
+            <table id="keeplist"></table>
+          </div>
+
+          <div class="adder">
+            <input type="text" id="new-pattern" placeholder="exemple.com ou *.exemple.com" />
+            <button id="add-pattern" type="button">Ajouter un site</button>
+          </div>
+
+          <p class="note" id="unfilterable"></p>
+
+          <div class="actions">
+            <button type="submit" class="primary">Enregistrer le profil</button>
+            <span class="hint">Les modifications ci-dessus ne s'appliquent qu'après enregistrement.</span>
+          </div>
+        </form>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Coffre de cookies</h2></div>
+
+        <p class="warning">
+          Un coffre de cookies est un coffre de jetons de session actifs : déchiffré, il permet
+          d'usurper vos sessions sans mot de passe ni second facteur. Il est chiffré par une phrase
+          secrète que vous seul connaissez, et qui n'est jamais enregistrée —
+          <strong>une phrase oubliée rend le coffre définitivement illisible</strong>. Seuls les
+          cookies sont sauvegardés.
+        </p>
+
+        <div class="field-row">
+          <label class="field check">
+            <input type="checkbox" id="vault-enabled" />
+            <span>Sauvegarder les cookies avant suppression</span>
+          </label>
+          <label class="field narrow">
+            <span class="field-label">Rétention (jours)</span>
+            <input type="number" id="vault-retention" min="1" max="90" step="1" />
+          </label>
+        </div>
+
+        <div class="actions">
+          <button id="save-settings" class="primary" type="button">Enregistrer les réglages</button>
+        </div>
+
+        <p id="vault-state" class="vault-state"></p>
+
+        <div class="field-row">
+          <label class="field">
+            <span class="field-label">Phrase secrète</span>
+            <input type="password" id="vault-passphrase" autocomplete="off" />
+          </label>
+          <div class="field buttons">
+            <button id="vault-restore" type="button">Restaurer les cookies</button>
+            <button id="vault-clear" type="button">Supprimer le coffre</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Sauvegarde de la configuration</h2></div>
+        <p class="hint">Exporte et importe les profils, pas les données de navigation.</p>
+        <div class="actions">
+          <button id="export" type="button">Exporter en JSON</button>
+          <button id="import" type="button">Importer</button>
+        </div>
+        <textarea id="import-area" placeholder="Coller un JSON de profils ici"></textarea>
+      </section>
+    </main>
+
+    <p id="status" role="status" class="status"></p>
 
     <script type="module" src="/src/ui/options/options.ts"></script>
   </body>

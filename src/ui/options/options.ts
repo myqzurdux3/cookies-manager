@@ -1,12 +1,12 @@
 import { send } from '../../core/messages';
+import { normalizePattern } from '../../core/patterns';
+import type { RestoreReport } from '../../core/restore';
 import type { Settings } from '../../core/settings';
 import { ALL_CATEGORIES } from '../../core/types';
 import type { Profile, Since } from '../../core/types';
-import type { RestoreReport } from '../../core/restore';
 import type { VaultSummary } from '../../core/vault';
 import { CATEGORY_LABELS, formatRestoreReport, formatVaultState } from '../labels';
-import { normalizePattern } from '../../core/patterns';
-import { cellState, removeRule, toggleRule } from './grid';
+import { COLUMNS, UNFILTERABLE, groupState, removeRule, toggleGroup } from './grid';
 
 const select = document.querySelector<HTMLSelectElement>('#profile-select')!;
 const nameInput = document.querySelector<HTMLInputElement>('#name')!;
@@ -16,12 +16,18 @@ const keeplistEl = document.querySelector<HTMLTableElement>('#keeplist')!;
 const newPattern = document.querySelector<HTMLInputElement>('#new-pattern')!;
 const statusEl = document.querySelector<HTMLParagraphElement>('#status')!;
 const importArea = document.querySelector<HTMLTextAreaElement>('#import-area')!;
+const unfilterableEl = document.querySelector<HTMLParagraphElement>('#unfilterable')!;
 
 let profiles: Profile[] = [];
 let current: Profile | null = null;
+let hideStatus: ReturnType<typeof setTimeout> | undefined;
 
-function say(message: string): void {
+function say(message: string, error = false): void {
   statusEl.textContent = message;
+  statusEl.classList.toggle('error', error);
+  statusEl.classList.add('visible');
+  clearTimeout(hideStatus);
+  hideStatus = setTimeout(() => statusEl.classList.remove('visible'), 6000);
 }
 
 function renderCategories(): void {
@@ -36,11 +42,15 @@ function renderCategories(): void {
           ? [...current!.categories, category]
           : current!.categories.filter((c) => c !== category);
       });
-      label.append(input, ` ${CATEGORY_LABELS[category]}`);
+
+      const text = document.createElement('span');
+      text.textContent = CATEGORY_LABELS[category];
+      label.append(input, text);
+
       if (category === 'passwords' || category === 'formData') {
         const warn = document.createElement('span');
-        warn.textContent = ' — suppression définitive, aucune exclusion par site';
-        warn.style.color = '#a00';
+        warn.className = 'danger-note';
+        warn.textContent = '— définitif, aucune exclusion par site';
         label.append(warn);
       }
       return label;
@@ -48,17 +58,40 @@ function renderCategories(): void {
   );
 }
 
+function renderUnfilterableNote(): void {
+  const names = UNFILTERABLE.map((category) => CATEGORY_LABELS[category]).join(' · ');
+  unfilterableEl.textContent =
+    `Ignorent la keep-list : ${names}. L'API navigateur n'accepte aucune exclusion par site ` +
+    `pour ces catégories — c'est tout ou rien, et elles ne figurent donc pas dans la grille.`;
+}
+
 function renderKeeplist(): void {
   const header = document.createElement('tr');
-  header.append(document.createElement('th'));
-  for (const category of ALL_CATEGORIES) {
+  const siteHead = document.createElement('th');
+  siteHead.textContent = 'Site';
+  header.append(siteHead);
+
+  for (const column of COLUMNS) {
     const th = document.createElement('th');
-    th.textContent = CATEGORY_LABELS[category];
+    th.textContent = column.label;
+    if (column.hint !== undefined) th.title = column.hint;
     header.append(th);
   }
-  const removeHeader = document.createElement('th');
-  removeHeader.textContent = 'Retirer';
-  header.append(removeHeader);
+
+  const removeHead = document.createElement('th');
+  removeHead.textContent = 'Retirer';
+  header.append(removeHead);
+
+  if (current!.keepRules.length === 0) {
+    const empty = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.className = 'empty';
+    cell.colSpan = COLUMNS.length + 2;
+    cell.textContent = 'Aucun site conservé : tout sera supprimé.';
+    empty.append(cell);
+    keeplistEl.replaceChildren(header, empty);
+    return;
+  }
 
   const rows = current!.keepRules.map((rule) => {
     const tr = document.createElement('tr');
@@ -66,20 +99,31 @@ function renderKeeplist(): void {
     patternCell.textContent = rule.pattern;
     tr.append(patternCell);
 
-    for (const category of ALL_CATEGORIES) {
+    for (const column of COLUMNS) {
       const td = document.createElement('td');
-      const checked = rule.keep[category] === true;
-      const state = cellState(category, checked);
+      const state = groupState(current!.keepRules, rule.pattern, column.categories);
+
       const input = document.createElement('input');
       input.type = 'checkbox';
-      input.checked = checked;
-      input.disabled = state.disabled;
-      input.title = state.title;
-      if (state.disabled) td.classList.add('disabled');
+      input.checked = state === 'all';
+      input.indeterminate = state === 'partial';
+      input.title =
+        state === 'partial'
+          ? `${column.label} : conservé en partie. Cocher protège tout le groupe.`
+          : state === 'all'
+            ? `${column.label} conservé pour ce site`
+            : `${column.label} supprimé pour ce site`;
+
       input.addEventListener('change', () => {
-        current!.keepRules = toggleRule(current!.keepRules, rule.pattern, category, input.checked);
+        current!.keepRules = toggleGroup(
+          current!.keepRules,
+          rule.pattern,
+          column.categories,
+          input.checked,
+        );
         renderKeeplist();
       });
+
       td.append(input);
       tr.append(td);
     }
@@ -87,6 +131,7 @@ function renderKeeplist(): void {
     const removeCell = document.createElement('td');
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
+    removeBtn.className = 'remove';
     removeBtn.textContent = '✕';
     removeBtn.title = `Retirer ${rule.pattern} de la liste des sites conservés`;
     removeBtn.addEventListener('click', () => {
@@ -147,12 +192,12 @@ document.querySelector('#add-pattern')!.addEventListener('click', () => {
 
   const result = normalizePattern(newPattern.value);
   if (!result.ok) {
-    say(`Motif refusé : ${result.reason}`);
+    say(`Motif refusé : ${result.reason}`, true);
     return;
   }
 
   if (current.keepRules.some((rule) => rule.pattern === result.pattern)) {
-    say(`${result.pattern} est déjà dans la liste.`);
+    say(`${result.pattern} est déjà dans la liste.`, true);
     return;
   }
 
@@ -171,9 +216,13 @@ document.querySelector<HTMLFormElement>('#editor')!.addEventListener('submit', a
   if (current === null) return;
   current.name = nameInput.value;
   current.since = sinceSelect.value as Since;
-  await send({ type: 'SAVE_PROFILE', profile: current });
-  say('Profil enregistré.');
-  await reload(current.id);
+  try {
+    await send({ type: 'SAVE_PROFILE', profile: current });
+    say('Profil enregistré.');
+    await reload(current.id);
+  } catch (cause) {
+    say(`Enregistrement refusé : ${cause instanceof Error ? cause.message : String(cause)}`, true);
+  }
 });
 
 document.querySelector('#export')!.addEventListener('click', async () => {
@@ -187,7 +236,7 @@ document.querySelector('#import')!.addEventListener('click', async () => {
     say('Profils importés.');
     await reload();
   } catch (cause) {
-    say(`Import refusé : ${cause instanceof Error ? cause.message : String(cause)}`);
+    say(`Import refusé : ${cause instanceof Error ? cause.message : String(cause)}`, true);
   }
 });
 
@@ -221,13 +270,13 @@ document.querySelector('#save-settings')!.addEventListener('click', async () => 
     });
     say('Réglages enregistrés.');
   } catch (cause) {
-    say(`Réglages refusés : ${cause instanceof Error ? cause.message : String(cause)}`);
+    say(`Réglages refusés : ${cause instanceof Error ? cause.message : String(cause)}`, true);
   }
 });
 
 document.querySelector('#vault-restore')!.addEventListener('click', async () => {
   if (vaultPassphrase.value === '') {
-    say('Phrase secrète requise pour restaurer.');
+    say('Phrase secrète requise pour restaurer.', true);
     return;
   }
   try {
@@ -235,9 +284,9 @@ document.querySelector('#vault-restore')!.addEventListener('click', async () => 
       type: 'VAULT_RESTORE',
       passphrase: vaultPassphrase.value,
     })) as RestoreReport;
-    say(formatRestoreReport(report));
+    say(formatRestoreReport(report), report.failures.length > 0);
   } catch (cause) {
-    say(`Restauration refusée : ${cause instanceof Error ? cause.message : String(cause)}`);
+    say(`Restauration refusée : ${cause instanceof Error ? cause.message : String(cause)}`, true);
   } finally {
     vaultPassphrase.value = '';
   }
@@ -249,5 +298,6 @@ document.querySelector('#vault-clear')!.addEventListener('click', async () => {
   await refreshVaultState();
 });
 
+renderUnfilterableNote();
 void reload();
 void loadSettings();

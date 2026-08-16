@@ -1,7 +1,7 @@
 import type { CategoryResult, PreviewResult } from '../core/engine';
 import type { RestoreReport } from '../core/restore';
 import type { VaultSummary } from '../core/vault';
-import type { Category } from '../core/types';
+import type { Category, Profile, Since } from '../core/types';
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   cookies: 'Cookies',
@@ -17,20 +17,54 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   siteSettings: 'Autorisations de site',
 };
 
-export function formatPreview(result: PreviewResult): string {
+export const SINCE_LABELS: Record<Since, string> = {
+  hour: 'dernière heure',
+  day: 'dernier jour',
+  week: 'dernière semaine',
+  month: 'dernier mois',
+  all: 'tout',
+};
+
+/** Une ligne de l'interface : libellé à gauche, valeur à droite, note en dessous. */
+export type Row = {
+  label: string;
+  value: string;
+  note?: string;
+  tone?: 'muted' | 'strong' | 'failed';
+};
+
+export function previewRow(result: PreviewResult): Row {
   const label = CATEGORY_LABELS[result.category];
-  if (result.preview.countable) return `${label} : ${result.preview.items} à supprimer`;
-  const note = result.preview.note === undefined ? '' : ` — ${result.preview.note}`;
-  return `${label} : non chiffrable${note}`;
+  const { countable, items, note } = result.preview;
+  if (countable) {
+    return {
+      label,
+      value: `${items} à supprimer`,
+      note,
+      tone: items > 0 ? 'strong' : 'muted',
+    };
+  }
+  return { label, value: 'non chiffrable', note, tone: 'muted' };
 }
 
-export function formatReport(result: CategoryResult): string {
+export function reportRow(result: CategoryResult): Row {
   const label = CATEGORY_LABELS[result.category];
   const { status, deleted, kept, error } = result.report;
-  if (status === 'failed') return `${label} : échec — ${error ?? 'raison inconnue'}`;
-  const counts = `${deleted} supprimé(s), ${kept} conservé(s)`;
-  if (status === 'partial') return `${label} : ${counts} — échec partiel : ${error ?? 'raison inconnue'}`;
-  return `${label} : ${counts}`;
+
+  if (status === 'failed') {
+    return { label, value: 'échec', note: error ?? 'raison inconnue', tone: 'failed' };
+  }
+
+  const value = `${deleted} supprimé(s) · ${kept} conservé(s)`;
+  if (status === 'partial') {
+    return { label, value, note: `échec partiel : ${error ?? 'raison inconnue'}`, tone: 'failed' };
+  }
+  return { label, value, tone: 'strong' };
+}
+
+export function profileMeta(profile: Pick<Profile, 'since' | 'categories'>): string {
+  const count = profile.categories.length;
+  return `${SINCE_LABELS[profile.since]} · ${count} catégorie${count > 1 ? 's' : ''}`;
 }
 
 export function needsExtraConfirmation(categories: Category[]): boolean {

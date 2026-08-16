@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Cookies Manager">
+  <defs>
+    <mask id="keep">
+      <polygon points="-512,-512 1132,-512 -512,1132" fill="white" />
+      <circle cx="400" cy="220" r="40" fill="black" />
+      <circle cx="350" cy="270" r="46" fill="black" />
+      <circle cx="300" cy="320" r="50" fill="black" />
+      <circle cx="250" cy="370" r="46" fill="black" />
+      <circle cx="200" cy="420" r="40" fill="black" />
+    </mask>
+  </defs>
+  <circle cx="240" cy="240" r="175" fill="#d18b2f" mask="url(#keep)" />
+  <circle cx="365" cy="300" r="22" fill="#d18b2f" />
+  <circle cx="330" cy="355" r="20" fill="#d18b2f" />
+  <circle cx="395" cy="250" r="16" fill="#d18b2f" />
+  <circle cx="300" cy="405" r="15" fill="#d18b2f" />
+  <circle cx="415" cy="330" r="13" fill="#d18b2f" />
+  <circle cx="360" cy="400" r="11" fill="#d18b2f" />
+  <circle cx="440" cy="285" r="9" fill="#d18b2f" />
+  <circle cx="330" cy="450" r="8" fill="#d18b2f" />
+  <circle cx="430" cy="385" r="7" fill="#d18b2f" />
+  <circle cx="395" cy="445" r="6" fill="#d18b2f" />
+  <circle cx="465" cy="340" r="5" fill="#d18b2f" />
+  <circle cx="455" cy="430" r="4" fill="#d18b2f" />
+  <circle cx="360" cy="480" r="4" fill="#d18b2f" />
+  <circle cx="180" cy="170" r="27" fill="#7a4a14" />
+  <circle cx="135" cy="265" r="21" fill="#7a4a14" />
+  <circle cx="215" cy="285" r="22" fill="#7a4a14" />
+  <circle cx="258" cy="150" r="16" fill="#7a4a14" />
+</svg>

@@ -20,6 +20,12 @@ empaquetée » → choisir `dist/`.
 | `npm test` | Suite Vitest, sans navigateur |
 | `npm run typecheck` | Vérification TypeScript |
 | `npm run build` | Produit `dist/` |
+| `python3 tools/make-icons.py` | Régénère le logo : `public/icons/logo.svg` et les PNG du manifeste |
+
+Le logo n'est pas un binaire opaque : sa géométrie vit dans `tools/make-icons.py`,
+qui produit à la fois le SVG de l'interface et les PNG 16/32/48/128 du manifeste,
+à partir de la même définition. Modifier le dessin veut dire modifier ce script et
+relancer la commande. Seul Pillow est requis, et seulement pour cette régénération.
 
 ## Syntaxe des motifs de keep-list
 

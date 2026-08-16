@@ -2,7 +2,8 @@ import type { CategoryResult, PreviewResult } from '../../core/engine';
 import { send } from '../../core/messages';
 import type { Settings } from '../../core/settings';
 import type { Category, Profile } from '../../core/types';
-import { formatPreview, formatReport, needsExtraConfirmation } from '../labels';
+import type { Row } from '../labels';
+import { needsExtraConfirmation, previewRow, profileMeta, reportRow } from '../labels';
 
 const OPTIONAL: Partial<Record<Category, chrome.runtime.ManifestPermissions>> = {
   history: 'history',
@@ -11,6 +12,7 @@ const OPTIONAL: Partial<Record<Category, chrome.runtime.ManifestPermissions>> = 
 };
 
 const profilesEl = document.querySelector<HTMLUListElement>('#profiles')!;
+const chooserEl = document.querySelector<HTMLElement>('#chooser')!;
 const previewEl = document.querySelector<HTMLElement>('#preview')!;
 const previewList = document.querySelector<HTMLUListElement>('#preview-list')!;
 const reportEl = document.querySelector<HTMLElement>('#report')!;
@@ -33,14 +35,35 @@ async function ensurePermissions(profile: Profile): Promise<boolean> {
   return chrome.permissions.request({ permissions: needed });
 }
 
-function render(list: HTMLUListElement, lines: string[]): void {
+function renderRows(list: HTMLUListElement, rows: Row[]): void {
   list.replaceChildren(
-    ...lines.map((line) => {
+    ...rows.map((row) => {
       const li = document.createElement('li');
-      li.textContent = line;
+
+      const label = document.createElement('span');
+      label.className = 'row-label';
+      label.textContent = row.label;
+
+      const value = document.createElement('span');
+      value.className = `row-value${row.tone === undefined ? '' : ` ${row.tone}`}`;
+      value.textContent = row.value;
+
+      li.append(label, value);
+
+      if (row.note !== undefined) {
+        const note = document.createElement('span');
+        note.className = 'row-note';
+        note.textContent = row.note;
+        li.append(note);
+      }
+
       return li;
     }),
   );
+}
+
+function renderMessage(list: HTMLUListElement, message: string): void {
+  renderRows(list, [{ label: message, value: '', tone: 'failed' }]);
 }
 
 async function showPreview(profile: Profile): Promise<void> {
@@ -48,14 +71,14 @@ async function showPreview(profile: Profile): Promise<void> {
   reportEl.hidden = true;
 
   if (!(await ensurePermissions(profile))) {
-    render(previewList, ["Permissions refusées : ce profil ne peut pas s'exécuter."]);
+    renderMessage(previewList, "Permissions refusées : ce profil ne peut pas s'exécuter.");
     previewEl.hidden = false;
     confirmBtn.disabled = true;
     return;
   }
 
   const results = (await send({ type: 'PREVIEW', profileId: profile.id })) as PreviewResult[];
-  render(previewList, results.map(formatPreview));
+  renderRows(previewList, results.map(previewRow));
 
   const risky = needsExtraConfirmation(profile.categories);
   dangerEl.hidden = !risky;
@@ -63,24 +86,28 @@ async function showPreview(profile: Profile): Promise<void> {
   confirmBtn.disabled = risky;
   vaultEl.hidden = !(settings.vaultEnabled && profile.categories.includes('cookies'));
   passphraseInput.value = '';
+  chooserEl.hidden = true;
   previewEl.hidden = false;
+}
+
+function backToChooser(): void {
+  previewEl.hidden = true;
+  chooserEl.hidden = false;
+  selected = null;
 }
 
 dangerCheck.addEventListener('change', () => {
   confirmBtn.disabled = !dangerCheck.checked;
 });
 
-cancelBtn.addEventListener('click', () => {
-  previewEl.hidden = true;
-  selected = null;
-});
+cancelBtn.addEventListener('click', backToChooser);
 
 confirmBtn.addEventListener('click', async () => {
   if (selected === null) return;
 
   const needsPassphrase = !vaultEl.hidden;
   if (needsPassphrase && passphraseInput.value === '') {
-    render(previewList, ['Phrase secrète requise : le coffre est actif, rien n’a été supprimé.']);
+    renderMessage(previewList, "Phrase secrète requise : le coffre est actif, rien n'a été supprimé.");
     return;
   }
 
@@ -92,19 +119,30 @@ confirmBtn.addEventListener('click', async () => {
   })) as CategoryResult[];
   passphraseInput.value = '';
   previewEl.hidden = true;
-  render(reportList, results.map(formatReport));
+  chooserEl.hidden = false;
+  renderRows(reportList, results.map(reportRow));
   reportEl.hidden = false;
 });
 
 async function init(): Promise<void> {
   settings = (await send({ type: 'GET_SETTINGS' })) as Settings;
   const profiles = (await send({ type: 'LIST_PROFILES' })) as Profile[];
+
   profilesEl.replaceChildren(
     ...profiles.map((profile) => {
       const li = document.createElement('li');
       const button = document.createElement('button');
       button.type = 'button';
-      button.textContent = profile.name;
+
+      const name = document.createElement('span');
+      name.className = 'profile-name';
+      name.textContent = profile.name;
+
+      const meta = document.createElement('span');
+      meta.className = 'profile-meta';
+      meta.textContent = profileMeta(profile);
+
+      button.append(name, meta);
       button.addEventListener('click', () => void showPreview(profile));
       li.append(button);
       return li;

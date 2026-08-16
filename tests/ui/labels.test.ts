@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
   CATEGORY_LABELS,
-  formatPreview,
-  formatReport,
   formatRestoreReport,
   formatVaultState,
   needsExtraConfirmation,
+  previewRow,
+  profileMeta,
+  reportRow,
 } from '../../src/ui/labels';
 import { ALL_CATEGORIES } from '../../src/core/types';
 
@@ -17,49 +18,74 @@ describe('CATEGORY_LABELS', () => {
   });
 });
 
-describe('formatPreview', () => {
-  it('affiche un décompte exact', () => {
-    expect(formatPreview({ category: 'cookies', preview: { countable: true, items: 12 } })).toBe(
-      'Cookies : 12 à supprimer',
+describe('previewRow', () => {
+  it('sépare le libellé du décompte', () => {
+    expect(previewRow({ category: 'cookies', preview: { countable: true, items: 12 } })).toEqual({
+      label: 'Cookies',
+      value: '12 à supprimer',
+      note: undefined,
+      tone: 'strong',
+    });
+  });
+
+  it('atténue une ligne qui ne supprime rien', () => {
+    expect(previewRow({ category: 'cookies', preview: { countable: true, items: 0 } }).tone).toBe(
+      'muted',
     );
   });
 
-  it('affiche le singulier au singulier', () => {
-    expect(formatPreview({ category: 'cookies', preview: { countable: true, items: 1 } })).toBe(
-      'Cookies : 1 à supprimer',
-    );
-  });
-
-  it("affiche « non chiffrable » quand l'API ne compte pas", () => {
+  it("reporte la note quand l'API ne sait pas compter", () => {
     expect(
-      formatPreview({ category: 'httpCache', preview: { countable: false, items: 0, note: 'tout ou rien' } }),
-    ).toBe('Cache HTTP : non chiffrable — tout ou rien');
+      previewRow({
+        category: 'httpCache',
+        preview: { countable: false, items: 0, note: 'tout ou rien' },
+      }),
+    ).toMatchObject({ label: 'Cache HTTP', value: 'non chiffrable', note: 'tout ou rien' });
   });
 });
 
-describe('formatReport', () => {
+describe('reportRow', () => {
   it('résume un nettoyage réussi', () => {
-    expect(
-      formatReport({ category: 'cookies', report: { status: 'ok', deleted: 3, kept: 2 } }),
-    ).toBe('Cookies : 3 supprimé(s), 2 conservé(s)');
+    expect(reportRow({ category: 'cookies', report: { status: 'ok', deleted: 3, kept: 2 } })).toEqual(
+      { label: 'Cookies', value: '3 supprimé(s) · 2 conservé(s)', tone: 'strong' },
+    );
   });
 
-  it("fait remonter l'erreur d'un nettoyage partiel", () => {
+  it("met l'erreur en note pour un nettoyage partiel", () => {
     expect(
-      formatReport({
+      reportRow({
         category: 'history',
         report: { status: 'partial', deleted: 1, kept: 0, error: 'verrouillé' },
       }),
-    ).toBe('Historique : 1 supprimé(s), 0 conservé(s) — échec partiel : verrouillé');
+    ).toEqual({
+      label: 'Historique',
+      value: '1 supprimé(s) · 0 conservé(s)',
+      note: 'échec partiel : verrouillé',
+      tone: 'failed',
+    });
   });
 
   it('signale un échec complet', () => {
     expect(
-      formatReport({
+      reportRow({
         category: 'passwords',
         report: { status: 'failed', deleted: 0, kept: 0, error: 'permission refusée' },
       }),
-    ).toBe('Mots de passe : échec — permission refusée');
+    ).toEqual({
+      label: 'Mots de passe',
+      value: 'échec',
+      note: 'permission refusée',
+      tone: 'failed',
+    });
+  });
+});
+
+describe('profileMeta', () => {
+  it('accorde le pluriel des catégories', () => {
+    expect(profileMeta({ since: 'all', categories: ['cookies'] })).toBe('tout · 1 catégorie');
+    expect(profileMeta({ since: 'week', categories: ['cookies', 'history'] })).toBe(
+      'dernière semaine · 2 catégories',
+    );
   });
 });
 

@@ -14,15 +14,53 @@ export const PER_SITE: Record<Category, 'exact' | 'origin' | 'none'> = {
   siteSettings: 'origin',
 };
 
-const NO_EXCLUSION =
-  "L'API navigateur n'accepte aucune exclusion par site pour cette catégorie : c'est tout ou rien.";
+export type Column = { key: string; label: string; categories: Category[]; hint?: string };
 
-export function cellState(category: Category, checked: boolean): { disabled: boolean; title: string } {
-  if (PER_SITE[category] === 'none') return { disabled: true, title: NO_EXCLUSION };
-  return {
-    disabled: false,
-    title: checked ? 'Conservé pour ce site' : 'Supprimé pour ce site',
-  };
+/**
+ * Colonnes de la grille. Les quatre stockages web partagent une colonne : ils
+ * relèvent tous de la même API, du même grain par origine, et personne ne
+ * distingue `cacheStorage` de `serviceWorkers` au moment de protéger un site.
+ */
+export const COLUMNS: Column[] = [
+  { key: 'cookies', label: 'Cookies', categories: ['cookies'] },
+  {
+    key: 'storage',
+    label: 'Stockage',
+    categories: ['localStorage', 'indexedDB', 'cacheStorage', 'serviceWorkers'],
+    hint: 'localStorage, IndexedDB, cache des applications et service workers',
+  },
+  { key: 'history', label: 'Historique', categories: ['history'] },
+  { key: 'downloads', label: 'Téléchargements', categories: ['downloads'] },
+  { key: 'siteSettings', label: 'Autorisations', categories: ['siteSettings'] },
+];
+
+/** Catégories que l'API ne sait pas exclure par site : hors tableau, dans leur propre bloc. */
+export const UNFILTERABLE: Category[] = ['httpCache', 'passwords', 'formData'];
+
+export type GroupState = 'all' | 'partial' | 'none';
+
+export function groupState(
+  rules: KeepRule[],
+  pattern: string,
+  categories: Category[],
+): GroupState {
+  const rule = rules.find((candidate) => candidate.pattern === pattern);
+  if (rule === undefined) return 'none';
+  const kept = categories.filter((category) => rule.keep[category] === true).length;
+  if (kept === 0) return 'none';
+  return kept === categories.length ? 'all' : 'partial';
+}
+
+export function toggleGroup(
+  rules: KeepRule[],
+  pattern: string,
+  categories: Category[],
+  checked: boolean,
+): KeepRule[] {
+  return categories.reduce(
+    (accumulated, category) => toggleRule(accumulated, pattern, category, checked),
+    rules,
+  );
 }
 
 export function removeRule(rules: KeepRule[], pattern: string): KeepRule[] {

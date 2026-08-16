@@ -1,32 +1,183 @@
-body { font: 14px/1.6 system-ui, sans-serif; margin: 24px auto; max-width: 900px; padding: 0 16px; }
-h1 { font-size: 20px; }
-h2 { font-size: 16px; margin-top: 24px; }
-label { display: block; margin: 8px 0; }
-table { border-collapse: collapse; width: 100%; margin-bottom: 8px; }
-th, td { border: 1px solid #ddd; padding: 4px 6px; text-align: center; font-size: 12px; }
-th:first-child, td:first-child { text-align: left; }
-input[disabled] { cursor: not-allowed; }
-td.disabled { background: #f5f5f5; }
-.hint { color: #555; font-size: 12px; }
+@import '../theme.css';
 
-/* Le formulaire est long : sans cette barre, le bouton d'enregistrement se
-   retrouve sous la grille et passe inaperçu. */
+body { padding: 0 20px 80px; }
+
+.page-header {
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 24px 0 16px;
+}
+
+.page-header .brand-mark { width: 32px; height: 32px; }
+.page-header .brand-name { font-size: 18px; }
+.page-header .hint { margin: 6px 0 0 42px; }
+
+main { max-width: 940px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+/* --- Cartes --- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px 20px;
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.card-head h2 { font-size: 15px; }
+.card-actions { display: flex; gap: 8px; align-items: center; }
+
+h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  margin: 20px 0 8px;
+}
+
+/* --- Champs --- */
+
+.field-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+.field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 220px; }
+.field.narrow { flex: 0 0 140px; }
+.field.check { flex-direction: row; align-items: center; gap: 8px; }
+.field.buttons { flex-direction: row; gap: 8px; align-items: flex-end; flex: 0 0 auto; }
+.field-label { font-size: 12px; color: var(--muted); }
+
+.checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 16px; }
+.checks label { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+.checks .danger-note { color: var(--danger); font-size: 12px; }
+
+/* --- Grille de keep-list --- */
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+
+table { border-collapse: collapse; width: 100%; }
+
+th, td {
+  padding: 8px 10px;
+  text-align: center;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+thead th, tr:first-child th {
+  background: var(--surface-sunken);
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+tr:last-child td { border-bottom: none; }
+th:first-child, td:first-child { text-align: left; font-family: ui-monospace, monospace; }
+tbody tr:hover td, table tr:hover td { background: var(--accent-soft); }
+
+.empty { color: var(--muted); font-style: italic; text-align: center; padding: 16px; }
+
+.remove {
+  color: var(--danger);
+  border: none;
+  background: none;
+  padding: 2px 8px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.remove:hover { background: var(--danger-soft); }
+
+.adder { display: flex; gap: 8px; margin-top: 10px; }
+.adder input { flex: 1 1 auto; max-width: 320px; }
+
+.note {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--border-strong);
+  background: var(--surface-sunken);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* --- Barre d'enregistrement --- */
+
 .actions {
   position: sticky;
   bottom: 0;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 0;
-  margin-top: 16px;
-  background: Canvas;
-  border-top: 1px solid #ddd;
+  flex-wrap: wrap;
+  padding: 12px 0 2px;
+  margin-top: 18px;
+  background: var(--surface);
 }
 
-.actions button { font-weight: 600; padding: 6px 14px; }
-#keeplist td:last-child button { color: #a00; border: none; background: none; cursor: pointer; font-size: 14px; }
-#keeplist td:last-child button:hover { background: #fee; border-radius: 4px; }
-.warning { border-left: 3px solid #a00; padding-left: 10px; color: #700; font-size: 13px; }
-#vault-state { font-size: 13px; color: #333; }
-textarea { display: block; width: 100%; height: 120px; margin: 8px 0; font-family: monospace; }
-#status { min-height: 1.6em; color: #060; }
+.card > .actions, form > .actions { border-top: 1px solid var(--border); }
+
+/* --- Coffre --- */
+
+.warning {
+  border-left: 3px solid var(--danger);
+  background: var(--danger-soft);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 12px 14px;
+  margin: 0 0 16px;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.vault-state {
+  margin: 14px 0;
+  padding: 10px 12px;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+}
+
+textarea {
+  display: block;
+  width: 100%;
+  height: 130px;
+  margin-top: 12px;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+
+/* --- Statut --- */
+
+.status {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  max-width: 720px;
+  margin: 0;
+  padding: 0;
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transition: opacity 160ms ease;
+  pointer-events: none;
+}
+
+.status.visible { opacity: 1; padding: 10px 16px; }
+.status.error { border-color: var(--danger); color: var(--danger); }
+
+code {
+  font-family: ui-monospace, monospace;
+  background: var(--surface-sunken);
+  padding: 1px 4px;
+  border-radius: 4px;
+}

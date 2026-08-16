@@ -1,0 +1,106 @@
+/* Palette commune à la popup et à la page d'options.
+   L'ambre porte les actions. Le rouge est réservé à ce qui est destructif ou
+   irréversible — mots de passe, formulaires, coffre. Rien d'autre n'est rouge :
+   un avertissement qui sert de décoration ne prévient plus de rien. */
+
+:root {
+  --bg: #fbfaf8;
+  --surface: #ffffff;
+  --surface-sunken: #f4f1ec;
+  --border: #e6e1d8;
+  --border-strong: #cfc7ba;
+  --text: #1b1a18;
+  --muted: #6b655c;
+  --accent: #b5761f;
+  --accent-hover: #97611a;
+  --accent-ink: #ffffff;
+  --accent-soft: #fdf3e3;
+  --danger: #a4231c;
+  --danger-soft: #fdf0ee;
+  --ok: #2f6b45;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 2px rgb(27 26 24 / 6%), 0 4px 12px rgb(27 26 24 / 5%);
+  --focus: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17161a;
+    --surface: #201e24;
+    --surface-sunken: #1a191e;
+    --border: #322e38;
+    --border-strong: #46414f;
+    --text: #f2efe9;
+    --muted: #a29a92;
+    --accent: #e0a145;
+    --accent-hover: #efb662;
+    --accent-ink: #17161a;
+    --accent-soft: #2b2317;
+    --danger: #f0776a;
+    --danger-soft: #2f1e1c;
+    --ok: #6fbf8f;
+
+    --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 14px rgb(0 0 0 / 30%);
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  margin: 0;
+}
+
+h1, h2, h3 { font-weight: 650; letter-spacing: -0.01em; margin: 0; }
+
+button {
+  font: inherit;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+button:hover:not(:disabled) { background: var(--surface-sunken); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+button.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+input[type="text"],
+input[type="password"],
+input[type="number"],
+select,
+textarea {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+}
+
+input[type="checkbox"] { accent-color: var(--accent); }
+
+:focus-visible { outline: none; box-shadow: var(--focus); border-color: var(--accent); }
+
+.hint { color: var(--muted); font-size: 12px; }
+
+.logo { display: block; width: 100%; height: 100%; }
+
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark { width: 26px; height: 26px; flex: none; }
+.brand-name { font-size: 14px; font-weight: 650; }
