@@ -21,5 +21,11 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    coverage: {
+      // Seul `src/` compte : mesurer les tests eux-mêmes ne dit rien.
+      include: ['src/**/*.ts'],
+      // Déclarations de types pures, sans code exécutable.
+      exclude: ['src/vite-env.d.ts'],
+    },
   },
 });
