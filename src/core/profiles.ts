@@ -1,6 +1,6 @@
 import { normalizePattern } from './patterns';
 import { ALL_CATEGORIES } from './types';
-import type { Profile, Since, Category } from './types';
+import type { Profile, Category } from './types';
 
 export interface StorageArea {
   get(key: string): Promise<Record<string, unknown>>;
@@ -49,6 +49,15 @@ export interface ProfileStore {
   importJson(json: string): Promise<void>;
 }
 
+/*
+ * Ce validateur parcourt du JSON venu de l'extérieur : ses valeurs sont `any`
+ * par nature, et le vérifier est précisément son travail. Les règles
+ * `no-unsafe-*` n'ont donc rien à dire ici.
+ */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access,
+   @typescript-eslint/no-unsafe-argument,
+   @typescript-eslint/no-unsafe-call,
+   @typescript-eslint/no-unsafe-assignment */
 function validate(value: unknown): Profile[] {
   if (!Array.isArray(value)) throw new Error('format de profils invalide');
 
@@ -102,6 +111,10 @@ function validate(value: unknown): Profile[] {
   }
   return value as Profile[];
 }
+/* eslint-enable @typescript-eslint/no-unsafe-member-access,
+   @typescript-eslint/no-unsafe-argument,
+   @typescript-eslint/no-unsafe-call,
+   @typescript-eslint/no-unsafe-assignment */
 
 /**
  * Un motif mal formé enregistré tel quel ne protège rien, sans le dire. Toute

@@ -6,12 +6,19 @@
   "scripts": {
     "build": "vite build",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@types/chrome": "^0.0.268",
+    "eslint": "^9.39.5",
     "happy-dom": "^15.11.7",
+    "prettier": "^3.9.6",
     "typescript": "^5.5.0",
+    "typescript-eslint": "^8.67.0",
     "vite": "^5.4.0",
     "vitest": "^2.0.0"
   },

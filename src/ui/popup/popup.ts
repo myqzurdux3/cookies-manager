@@ -129,7 +129,15 @@ dangerCheck.addEventListener('change', () => {
 
 cancelBtn.addEventListener('click', backToChooser);
 
-confirmBtn.addEventListener('click', async () => {
+confirmBtn.addEventListener('click', () => {
+  void runClean();
+});
+
+/**
+ * Un gestionnaire `async` passé à `addEventListener` rend une promesse que
+ * personne n'attend : un rejet deviendrait une erreur non capturée, invisible.
+ */
+async function runClean(): Promise<void> {
   if (selected === null) return;
 
   const needsPassphrase = !vaultEl.hidden;
@@ -173,7 +181,7 @@ confirmBtn.addEventListener('click', async () => {
   );
 
   reportEl.hidden = false;
-});
+}
 
 doneBtn.addEventListener('click', () => {
   reportEl.hidden = true;

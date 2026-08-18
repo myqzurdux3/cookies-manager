@@ -1,6 +1,6 @@
 import { matchesPattern } from '../core/matcher';
 import type { CategoryPlan } from '../core/planner';
-import type { Category, Cleaner, CleanReport, Preview } from '../core/types';
+import type { Cleaner, CleanReport, Preview } from '../core/types';
 
 export type BrowsingDataApi = {
   browsingData: {
@@ -43,7 +43,7 @@ export function createStorageCleaner(
   knownHosts: OriginSource,
 ): Cleaner {
   return {
-    id: category as Category,
+    id: category,
     perSite: 'origin',
 
     async preview(plan: CategoryPlan): Promise<Preview> {

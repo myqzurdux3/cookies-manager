@@ -19,7 +19,7 @@ export type Message =
 export type Response = { ok: true; data: unknown } | { ok: false; error: string };
 
 export async function send(message: Message): Promise<unknown> {
-  const response = (await chrome.runtime.sendMessage(message)) as Response;
+  const response: Response = await chrome.runtime.sendMessage(message);
   if (!response.ok) throw new Error(response.error);
   return response.data;
 }

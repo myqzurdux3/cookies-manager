@@ -22,6 +22,18 @@ let profiles: Profile[] = [];
 let current: Profile | null = null;
 let hideStatus: ReturnType<typeof setTimeout> | undefined;
 
+/**
+ * Un gestionnaire `async` passé tel quel à `addEventListener` rend une promesse
+ * que personne n'attend : un rejet devient une erreur non capturée, invisible.
+ * Ce point de passage l'ignore explicitement — chaque gestionnaire traite déjà
+ * ses propres erreurs — et supprime au passage la répétition du `querySelector`.
+ */
+function onClick(selector: string, handler: () => Promise<void> | void): void {
+  document.querySelector(selector)!.addEventListener('click', () => {
+    void handler();
+  });
+}
+
 function reason(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
 }
@@ -188,7 +200,7 @@ select.addEventListener('change', () => {
   if (profile !== undefined) renderProfile(profile);
 });
 
-document.querySelector('#new-profile')!.addEventListener('click', () => {
+onClick('#new-profile', () => {
   renderProfile({
     id: crypto.randomUUID(),
     name: 'Nouveau profil',
@@ -198,7 +210,7 @@ document.querySelector('#new-profile')!.addEventListener('click', () => {
   });
 });
 
-document.querySelector('#delete-profile')!.addEventListener('click', async () => {
+onClick('#delete-profile', async () => {
   if (current === null) return;
   try {
     await send({ type: 'DELETE_PROFILE', id: current.id });
@@ -210,7 +222,7 @@ document.querySelector('#delete-profile')!.addEventListener('click', async () =>
   await reload();
 });
 
-document.querySelector('#add-pattern')!.addEventListener('click', () => {
+onClick('#add-pattern', () => {
   if (current === null) return;
 
   const result = normalizePattern(newPattern.value);
@@ -234,8 +246,7 @@ document.querySelector('#add-pattern')!.addEventListener('click', () => {
   );
 });
 
-document.querySelector<HTMLFormElement>('#editor')!.addEventListener('submit', async (event) => {
-  event.preventDefault();
+async function saveProfile(): Promise<void> {
   if (current === null) return;
   current.name = nameInput.value;
   current.since = sinceSelect.value as Since;
@@ -244,11 +255,18 @@ document.querySelector<HTMLFormElement>('#editor')!.addEventListener('submit', a
     say('Profil enregistré.');
     await reload(current.id);
   } catch (cause) {
-    say(`Enregistrement refusé : ${cause instanceof Error ? cause.message : String(cause)}`, true);
+    say(`Enregistrement refusé : ${reason(cause)}`, true);
   }
+}
+
+document.querySelector<HTMLFormElement>('#editor')!.addEventListener('submit', (event) => {
+  // preventDefault doit rester synchrone : la soumission part sinon avant que
+  // le gestionnaire asynchrone ne reprenne la main.
+  event.preventDefault();
+  void saveProfile();
 });
 
-document.querySelector('#export')!.addEventListener('click', async () => {
+onClick('#export', async () => {
   try {
     importArea.value = (await send({ type: 'EXPORT' })) as string;
   } catch (cause) {
@@ -258,7 +276,7 @@ document.querySelector('#export')!.addEventListener('click', async () => {
   say('Profils exportés dans la zone de texte.');
 });
 
-document.querySelector('#import')!.addEventListener('click', async () => {
+onClick('#import', async () => {
   try {
     await send({ type: 'IMPORT', json: importArea.value });
     say('Profils importés.');
@@ -291,7 +309,7 @@ async function loadSettings(): Promise<void> {
   }
 }
 
-document.querySelector('#save-settings')!.addEventListener('click', async () => {
+onClick('#save-settings', async () => {
   try {
     await send({
       type: 'SAVE_SETTINGS',
@@ -306,7 +324,7 @@ document.querySelector('#save-settings')!.addEventListener('click', async () => 
   }
 });
 
-document.querySelector('#vault-restore')!.addEventListener('click', async () => {
+onClick('#vault-restore', async () => {
   if (vaultPassphrase.value === '') {
     say('Phrase secrète requise pour restaurer.', true);
     return;
@@ -340,7 +358,11 @@ function disarmVaultClear(): void {
   vaultClear.classList.remove('danger');
 }
 
-vaultClear.addEventListener('click', async () => {
+vaultClear.addEventListener('click', () => {
+  void clearVault();
+});
+
+async function clearVault(): Promise<void> {
   if (!vaultClearArmed) {
     vaultClearArmed = true;
     vaultClear.textContent = 'Confirmer la suppression';
@@ -358,7 +380,7 @@ vaultClear.addEventListener('click', async () => {
   }
   say('Coffre supprimé.');
   await refreshVaultState();
-});
+}
 
 renderUnfilterableNote();
 void reload();

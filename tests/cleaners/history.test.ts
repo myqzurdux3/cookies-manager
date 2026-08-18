@@ -105,16 +105,6 @@ describe('createHistoryCleaner', () => {
   });
 
   it('rend un statut partiel quand une suppression échoue', async () => {
-    const api = {
-      history: {
-        async search() {
-          return PAGES;
-        },
-        async deleteUrl() {
-          throw new Error('historique verrouillé');
-        },
-      },
-    };
     let first = true;
     const paged = {
       history: {
@@ -123,7 +113,9 @@ describe('createHistoryCleaner', () => {
           first = false;
           return PAGES;
         },
-        deleteUrl: api.history.deleteUrl,
+        async deleteUrl() {
+          throw new Error('historique verrouillé');
+        },
       },
     };
     const report = await createHistoryCleaner(paged).clean(plan([]));
