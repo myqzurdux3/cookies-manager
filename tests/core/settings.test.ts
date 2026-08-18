@@ -80,4 +80,13 @@ describe('createSettingsStore', () => {
       expect((await store.get()).vaultRetentionDays).toBe(stored);
     }
   });
+
+  it("retombe sur le défaut quand l'activation du coffre n'est pas un booléen", async () => {
+    const store = createSettingsStore(
+      fakeArea({ settings: { vaultEnabled: 'oui', vaultRetentionDays: 30 } }),
+    );
+    const settings = await store.get();
+    expect(settings.vaultEnabled).toBe(DEFAULT_SETTINGS.vaultEnabled);
+    expect(settings.vaultRetentionDays).toBe(30);
+  });
 });

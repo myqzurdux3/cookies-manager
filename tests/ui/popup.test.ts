@@ -237,4 +237,16 @@ describe('popup', () => {
     await settle();
     expect(chrome.sent.some((m) => m.type === 'VAULT_DESCRIBE')).toBe(false);
   });
+
+  it('annonce un service worker injoignable au chargement de la popup', async () => {
+    await mountPopup((type) =>
+      type === 'GET_SETTINGS' ? { ok: false, error: 'worker endormi' } : HAPPY(type),
+    );
+
+    // Sans ce filet, la popup restait vide sans rien expliquer.
+    expect(text('#preview-list')).toContain('worker endormi');
+    expect(document.querySelector<HTMLElement>('#preview')!.hidden).toBe(false);
+    expect(document.querySelector<HTMLElement>('#chooser')!.hidden).toBe(true);
+    expect(document.querySelector<HTMLButtonElement>('#confirm')!.disabled).toBe(true);
+  });
 });

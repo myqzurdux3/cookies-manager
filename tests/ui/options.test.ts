@@ -222,4 +222,131 @@ describe('page d’options', () => {
       '[{"id":"p1"}]',
     );
   });
+
+  it('coche et décoche une catégorie du profil courant', async () => {
+    const chrome = await mountOptions(HAPPY);
+    const cases = Array.from(document.querySelectorAll<HTMLInputElement>('#categories input'));
+    const historique = cases[6]!; // ordre de ALL_CATEGORIES
+
+    historique.checked = true;
+    historique.dispatchEvent(new Event('change'));
+    document
+      .querySelector<HTMLFormElement>('#editor')!
+      .dispatchEvent(new Event('submit', { cancelable: true }));
+    await settle();
+
+    const envoye = chrome.sent.find((m) => m.type === 'SAVE_PROFILE') as
+      { profile: { categories: string[] } } | undefined;
+    expect(envoye?.profile.categories).toContain('history');
+
+    historique.checked = false;
+    historique.dispatchEvent(new Event('change'));
+    document
+      .querySelector<HTMLFormElement>('#editor')!
+      .dispatchEvent(new Event('submit', { cancelable: true }));
+    await settle();
+
+    const dernier = chrome.sent.filter((m) => m.type === 'SAVE_PROFILE').at(-1) as unknown as {
+      profile: { categories: string[] };
+    };
+    expect(dernier.profile.categories).not.toContain('history');
+  });
+
+  it('annonce une keep-list vide au lieu de laisser un tableau nu', async () => {
+    await mountOptions((type) =>
+      type === 'LIST_PROFILES' ? ok([{ ...PROFILE, keepRules: [] }]) : HAPPY(type),
+    );
+    expect(text('#keeplist')).toMatch(/aucun site conservé/i);
+  });
+
+  it('bascule une colonne de la grille et retire un site', async () => {
+    const chrome = await mountOptions(HAPPY);
+
+    // La colonne « Stockage » couvre quatre catégories d'un coup.
+    const lignes = Array.from(document.querySelectorAll<HTMLTableRowElement>('#keeplist tr'));
+    const ligne = lignes.find((tr) => tr.textContent?.startsWith('github.com'))!;
+    const stockage = Array.from(ligne.querySelectorAll<HTMLInputElement>('input'))[1]!;
+    stockage.checked = true;
+    stockage.dispatchEvent(new Event('change'));
+    await settle();
+
+    document
+      .querySelector<HTMLFormElement>('#editor')!
+      .dispatchEvent(new Event('submit', { cancelable: true }));
+    await settle();
+    const envoye = chrome.sent.find((m) => m.type === 'SAVE_PROFILE') as unknown as {
+      profile: { keepRules: { pattern: string; keep: Record<string, true> }[] };
+    };
+    const regle = envoye.profile.keepRules.find((r) => r.pattern === 'github.com')!;
+    expect(Object.keys(regle.keep).sort()).toEqual([
+      'cacheStorage',
+      'cookies',
+      'indexedDB',
+      'localStorage',
+      'serviceWorkers',
+    ]);
+
+    document.querySelector<HTMLButtonElement>('#keeplist .remove')!.click();
+    await settle();
+    expect(text('#keeplist')).not.toContain('github.com');
+    expect(text('#status')).toMatch(/retiré/i);
+  });
+
+  it('crée un profil neuf et change de profil sélectionné', async () => {
+    await mountOptions((type) =>
+      type === 'LIST_PROFILES'
+        ? ok([PROFILE, { ...PROFILE, id: 'p2', name: 'Second' }])
+        : HAPPY(type),
+    );
+
+    const select = document.querySelector<HTMLSelectElement>('#profile-select')!;
+    select.value = 'p2';
+    select.dispatchEvent(new Event('change'));
+    expect(document.querySelector<HTMLInputElement>('#name')!.value).toBe('Second');
+
+    click('#new-profile');
+    expect(document.querySelector<HTMLInputElement>('#name')!.value).toBe('Nouveau profil');
+    expect(text('#keeplist')).toMatch(/aucun site conservé/i);
+  });
+
+  it('confirme la suppression d’un profil et recharge la liste', async () => {
+    const chrome = await mountOptions(HAPPY);
+    click('#delete-profile');
+    await settle();
+    expect(chrome.sent.some((m) => m.type === 'DELETE_PROFILE')).toBe(true);
+    expect(text('#status')).toMatch(/profil supprimé/i);
+  });
+
+  it('confirme un import et un enregistrement de réglages réussis', async () => {
+    const chrome = await mountOptions(HAPPY);
+
+    document.querySelector<HTMLTextAreaElement>('#import-area')!.value = '[]';
+    click('#import');
+    await settle();
+    expect(text('#status')).toMatch(/profils importés/i);
+
+    document.querySelector<HTMLInputElement>('#vault-retention')!.value = '30';
+    click('#save-settings');
+    await settle();
+    const reglages = chrome.sent.find((m) => m.type === 'SAVE_SETTINGS') as unknown as {
+      settings: { vaultRetentionDays: number };
+    };
+    expect(reglages.settings.vaultRetentionDays).toBe(30);
+    expect(text('#status')).toMatch(/réglages enregistrés/i);
+  });
+
+  it('annonce des réglages illisibles au chargement', async () => {
+    await mountOptions((type) =>
+      type === 'GET_SETTINGS' ? { ok: false, error: 'réglages abîmés' } : HAPPY(type),
+    );
+    expect(text('#status')).toContain('réglages abîmés');
+  });
+
+  it('confirme un motif ajouté sans correction', async () => {
+    await mountOptions(HAPPY);
+    document.querySelector<HTMLInputElement>('#new-pattern')!.value = 'exemple.test';
+    click('#add-pattern');
+    await settle();
+    expect(text('#status')).toMatch(/exemple\.test ajouté/i);
+  });
 });

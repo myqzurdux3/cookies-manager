@@ -88,4 +88,20 @@ describe('createDownloadsCleaner', () => {
     expect(erased).toEqual([]);
     expect(report.kept).toBe(1);
   });
+
+  it('rend un statut partiel quand un effacement est refusé', async () => {
+    const api = {
+      downloads: {
+        async search() {
+          return ITEMS;
+        },
+        erase(): Promise<never> {
+          return Promise.reject(new Error('fichier verrouillé'));
+        },
+      },
+    };
+    const report = await createDownloadsCleaner(api).clean(plan([]));
+    expect(report).toMatchObject({ status: 'partial', deleted: 0 });
+    expect(report.error).toMatch(/fichier verrouillé/);
+  });
 });

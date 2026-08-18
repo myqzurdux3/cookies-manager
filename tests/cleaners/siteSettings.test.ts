@@ -122,4 +122,17 @@ describe('createSiteSettingsCleaner', () => {
     expect(preview.note).toMatch(/posés par cette extension/i);
     expect(preview.note).toMatch(/wildcard/i);
   });
+
+  it('rend un statut partiel quand un type géré échoue', async () => {
+    const { api } = fakeApi();
+    const casse = api as unknown as {
+      contentSettings: { notifications: { clear: () => Promise<void> } };
+    };
+    casse.contentSettings.notifications.clear = () =>
+      Promise.reject(new Error('réglages verrouillés'));
+
+    const report = await createSiteSettingsCleaner(api).clean(plan([]));
+    expect(report.status).toBe('partial');
+    expect(report.error).toMatch(/réglages verrouillés/);
+  });
 });

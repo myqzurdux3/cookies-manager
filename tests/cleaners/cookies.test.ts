@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createCookiesCleaner, cookieUrl } from '../../src/cleaners/cookies';
+import { createCookiesCleaner, cookieUrl, deletableCookies } from '../../src/cleaners/cookies';
 import type { CategoryPlan } from '../../src/core/planner';
 
 type FakeCookie = { name: string; domain: string; path: string; secure: boolean };
@@ -116,5 +116,24 @@ describe('createCookiesCleaner', () => {
     const preview = await createCookiesCleaner(fakeApi(COOKIES).api).preview(plan([], 1234));
     expect(preview.note).toMatch(/cloisonn/i);
     expect(preview.note).toMatch(/période/i);
+  });
+
+  describe('deletableCookies', () => {
+    // Le coffre sauvegarde exactement ce que le cleaner va supprimer : les deux
+    // doivent s'appuyer sur la même règle, sans la dupliquer.
+    it('rend exactement les cookies que le nettoyage supprimerait', () => {
+      const condamnes = deletableCookies(
+        COOKIES as never,
+        plan([{ pattern: '*.github.com', keep: { cookies: true } }]),
+      );
+      expect(condamnes.map((c) => c.domain)).not.toContain('.github.com');
+      expect(condamnes.length).toBeGreaterThan(0);
+    });
+
+    it('rend une liste vide quand tout est protégé', () => {
+      expect(
+        deletableCookies(COOKIES as never, plan([{ pattern: '*', keep: { cookies: true } }])),
+      ).toEqual([]);
+    });
   });
 });

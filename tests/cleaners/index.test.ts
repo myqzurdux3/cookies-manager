@@ -69,6 +69,23 @@ describe('collectKnownHosts', () => {
     expect(await collectKnownHosts(partial)).toEqual([]);
   });
 
+  it("continue sans l'historique quand sa permission est révoquée", async () => {
+    const sansHistorique = {
+      cookies: {
+        async getAll() {
+          return [{ name: 'a', domain: '.github.com', path: '/', secure: true }];
+        },
+      },
+      history: {
+        search(): Promise<never> {
+          return Promise.reject(new Error('permission history révoquée'));
+        },
+      },
+    } as never;
+    // La liste reste partielle, ce que l'aperçu du stockage annonce déjà.
+    expect(await collectKnownHosts(sansHistorique)).toEqual(['github.com']);
+  });
+
   it("remonte l'erreur si même les cookies sont refusés", async () => {
     const refused = {
       cookies: {

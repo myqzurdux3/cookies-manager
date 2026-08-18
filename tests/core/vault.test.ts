@@ -170,4 +170,14 @@ describe('createVault', () => {
     await createVault(crypto, area).store(COOKIES, 'phrase correcte', 1000);
     expect((data[VAULT_KEY] as { iterations: number }).iterations).toBe(PBKDF2_ITERATIONS);
   });
+
+  it('distingue un contenu corrompu d’un enregistrement malformé', async () => {
+    const { area, data } = fakeArea();
+    const vault = createVault(crypto, area, TEST_ITERATIONS);
+    await vault.store(COOKIES, 'phrase correcte', 1000);
+
+    // L'enregistrement reste bien formé : seul le base64 est abîmé.
+    (data[VAULT_KEY] as { cipher: string }).cipher = 'pas du base64 !!';
+    await expect(vault.read('phrase correcte')).rejects.toThrow(/contenu corrompu/i);
+  });
 });
