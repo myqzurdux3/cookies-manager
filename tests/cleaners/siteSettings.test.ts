@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { createSiteSettingsCleaner, MANAGED_TYPES } from '../../src/cleaners/siteSettings';
+import {
+  createSiteSettingsCleaner,
+  MANAGED_DEFAULTS,
+  MANAGED_TYPES,
+} from '../../src/cleaners/siteSettings';
 import type { CategoryPlan } from '../../src/core/planner';
 
 function fakeApi(settings: Record<string, string> = {}) {
@@ -9,7 +13,9 @@ function fakeApi(settings: Record<string, string> = {}) {
   for (const type of MANAGED_TYPES) {
     contentSettings[type] = {
       async get(details: { primaryUrl: string }) {
-        return { setting: settings[`${type}:${details.primaryUrl}`] ?? 'default' };
+        // chrome.contentSettings.get() ne rend jamais 'default' : il rend la
+        // valeur effective, donc le défaut du navigateur quand rien n'est posé.
+        return { setting: settings[`${type}:${details.primaryUrl}`] ?? MANAGED_DEFAULTS[type] };
       },
       async set(details: { primaryPattern: string; setting: string }) {
         events.push(`set ${type} ${details.primaryPattern} ${details.setting}`);
@@ -54,6 +60,17 @@ describe('createSiteSettingsCleaner', () => {
       plan([{ pattern: 'github.com', keep: { siteSettings: true } }]),
     );
     expect(events.some((event) => event.startsWith('set '))).toBe(false);
+  });
+
+  it('restaure un réglage qui vaut le défaut voisin mais pas celui de son type', async () => {
+    // 'block' est le défaut de popups, pas celui de notifications : pour
+    // notifications c'est un choix explicite de l'utilisateur, à restaurer.
+    const { api, events } = fakeApi({ 'notifications:https://github.com': 'block' });
+    await createSiteSettingsCleaner(api).clean(
+      plan([{ pattern: 'github.com', keep: { siteSettings: true } }]),
+    );
+    expect(events).toContain('set notifications https://github.com/* block');
+    expect(events).not.toContain('set popups https://github.com/* block');
   });
 
   it("ne restaure pas les réglages d'une règle qui ne protège pas cette catégorie", async () => {

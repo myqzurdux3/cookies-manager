@@ -1,14 +1,23 @@
 import type { CategoryPlan } from '../core/planner';
 import type { Cleaner, CleanReport, KeepRule, Preview } from '../core/types';
 
-export const MANAGED_TYPES = [
-  'notifications',
-  'location',
-  'camera',
-  'microphone',
-  'popups',
-  'automaticDownloads',
-];
+/**
+ * Valeur rendue par `contentSettings.<type>.get()` quand l'utilisateur n'a rien
+ * décidé. Contrairement à ce que la première version supposait, l'API ne rend
+ * jamais `'default'` : elle rend la valeur effective, donc le défaut du
+ * navigateur. Sans cette table, tout réglage était considéré comme un choix
+ * explicite et réécrit en règle d'extension après l'effacement.
+ */
+export const MANAGED_DEFAULTS: Record<string, string> = {
+  notifications: 'ask',
+  location: 'ask',
+  camera: 'ask',
+  microphone: 'ask',
+  popups: 'block',
+  automaticDownloads: 'ask',
+};
+
+export const MANAGED_TYPES = Object.keys(MANAGED_DEFAULTS);
 
 type SettingApi = {
   get(details: { primaryUrl: string }): Promise<{ setting: string }>;
@@ -67,7 +76,9 @@ export function createSiteSettingsCleaner(api: ContentSettingsApi): Cleaner {
           for (const host of hosts) {
             const url = `https://${host}`;
             const current = await setting.get({ primaryUrl: url });
-            if (current.setting !== 'default') snapshot.push({ url, value: current.setting });
+            if (current.setting !== MANAGED_DEFAULTS[type]) {
+              snapshot.push({ url, value: current.setting });
+            }
           }
 
           await setting.clear({ scope: 'regular' });
