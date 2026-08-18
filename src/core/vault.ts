@@ -92,7 +92,17 @@ function isRecord(value: unknown): value is VaultRecord {
   );
 }
 
-export function createVault(cryptoApi: Crypto, area: StorageArea): Vault {
+/**
+ * `iterations` n'est paramétrable que pour les tests : dériver une clé à
+ * 310 000 itérations coûte ~40 ms, et la suite le fait quinze fois. Le chemin
+ * de lecture prend de toute façon le compte dans l'enregistrement, pas dans
+ * cette valeur — un coffre reste donc lisible quel qu'ait été le réglage.
+ */
+export function createVault(
+  cryptoApi: Crypto,
+  area: StorageArea,
+  iterations: number = PBKDF2_ITERATIONS,
+): Vault {
   async function deriveKey(
     passphrase: string,
     salt: Uint8Array<ArrayBuffer>,
@@ -126,7 +136,7 @@ export function createVault(cryptoApi: Crypto, area: StorageArea): Vault {
     async store(cookies: StoredCookie[], passphrase: string, at: number): Promise<void> {
       const salt = cryptoApi.getRandomValues(new Uint8Array(SALT_BYTES));
       const iv = cryptoApi.getRandomValues(new Uint8Array(IV_BYTES));
-      const key = await deriveKey(passphrase, salt, PBKDF2_ITERATIONS);
+      const key = await deriveKey(passphrase, salt, iterations);
       const cipher = await cryptoApi.subtle.encrypt(
         { name: 'AES-GCM', iv },
         key,
@@ -137,7 +147,7 @@ export function createVault(cryptoApi: Crypto, area: StorageArea): Vault {
         version: 1,
         salt: toBase64(salt),
         iv: toBase64(iv),
-        iterations: PBKDF2_ITERATIONS,
+        iterations,
         cipher: toBase64(new Uint8Array(cipher)),
         createdAt: at,
         cookieCount: cookies.length,

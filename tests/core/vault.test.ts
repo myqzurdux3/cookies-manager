@@ -31,37 +31,44 @@ const COOKIES = [
 
 const DAY = 24 * 60 * 60 * 1000;
 
+/**
+ * Les tests ne mesurent pas la solidité de PBKDF2, ils vérifient la logique du
+ * coffre. Un test garde la vraie constante ; les autres tournent avec un compte
+ * réduit, ce qui divise le temps de la suite par plus de deux.
+ */
+const TEST_ITERATIONS = 1_000;
+
 describe('createVault', () => {
   it('rend les cookies identiques après un aller-retour', async () => {
     const { area } = fakeArea();
-    const vault = createVault(crypto, area);
+    const vault = createVault(crypto, area, TEST_ITERATIONS);
     await vault.store(COOKIES, 'phrase correcte', 1000);
     expect(await vault.read('phrase correcte')).toEqual(COOKIES);
   });
 
   it('rejette une phrase incorrecte sans rendre de données', async () => {
     const { area } = fakeArea();
-    const vault = createVault(crypto, area);
+    const vault = createVault(crypto, area, TEST_ITERATIONS);
     await vault.store(COOKIES, 'phrase correcte', 1000);
     await expect(vault.read('mauvaise phrase')).rejects.toThrow(/phrase incorrecte/i);
   });
 
   it('distingue un coffre absent d’une phrase incorrecte', async () => {
     const { area } = fakeArea();
-    const vault = createVault(crypto, area);
+    const vault = createVault(crypto, area, TEST_ITERATIONS);
     await expect(vault.read('peu importe')).rejects.toThrow(/aucun coffre/i);
     expect(await vault.describe()).toBeNull();
   });
 
   it('signale un coffre illisible', async () => {
     const { area } = fakeArea({ [VAULT_KEY]: { version: 1, cipher: 'pas du base64 valide !!' } });
-    const vault = createVault(crypto, area);
+    const vault = createVault(crypto, area, TEST_ITERATIONS);
     await expect(vault.read('peu importe')).rejects.toThrow(/illisible/i);
   });
 
   it('produit un chiffré différent à chaque écriture, à phrase égale', async () => {
     const { area, data } = fakeArea();
-    const vault = createVault(crypto, area);
+    const vault = createVault(crypto, area, TEST_ITERATIONS);
     await vault.store(COOKIES, 'même phrase', 1000);
     const first = structuredClone(data[VAULT_KEY]) as { cipher: string; salt: string; iv: string };
     await vault.store(COOKIES, 'même phrase', 2000);
@@ -73,7 +80,7 @@ describe('createVault', () => {
 
   it('ne divulgue ni chiffré, ni sel, ni vecteur, ni valeur de cookie dans describe', async () => {
     const { area } = fakeArea();
-    const vault = createVault(crypto, area);
+    const vault = createVault(crypto, area, TEST_ITERATIONS);
     await vault.store(COOKIES, 'phrase', 1000);
     const described = await vault.describe();
     expect(described).toMatchObject({ createdAt: 1000, cookieCount: 2 });
@@ -83,14 +90,14 @@ describe('createVault', () => {
 
   it('résume les domaines sans doublon dans describe', async () => {
     const { area } = fakeArea();
-    const vault = createVault(crypto, area);
+    const vault = createVault(crypto, area, TEST_ITERATIONS);
     await vault.store([...COOKIES, { ...COOKIES[0]!, name: 'autre' }], 'phrase', 1000);
     expect((await vault.describe())!.domains.sort()).toEqual(['.example.com', '.github.com']);
   });
 
   it('écrit sous la seule clé du coffre', async () => {
     const { area, data } = fakeArea({ runs: ['journal intact'] });
-    const vault = createVault(crypto, area);
+    const vault = createVault(crypto, area, TEST_ITERATIONS);
     await vault.store(COOKIES, 'phrase', 1000);
     expect(Object.keys(data).sort()).toEqual(['runs', VAULT_KEY].sort());
     expect(data.runs).toEqual(['journal intact']);
@@ -98,7 +105,7 @@ describe('createVault', () => {
 
   it('supprime un coffre au-delà de la rétention', async () => {
     const { area } = fakeArea();
-    const vault = createVault(crypto, area);
+    const vault = createVault(crypto, area, TEST_ITERATIONS);
     await vault.store(COOKIES, 'phrase', 0);
     expect(await vault.purgeExpired((DEFAULT_RETENTION_DAYS + 1) * DAY, DEFAULT_RETENTION_DAYS)).toBe(true);
     expect(await vault.describe()).toBeNull();
@@ -106,7 +113,7 @@ describe('createVault', () => {
 
   it('conserve un coffre encore dans la rétention', async () => {
     const { area } = fakeArea();
-    const vault = createVault(crypto, area);
+    const vault = createVault(crypto, area, TEST_ITERATIONS);
     await vault.store(COOKIES, 'phrase', 0);
     expect(await vault.purgeExpired(DAY, DEFAULT_RETENTION_DAYS)).toBe(false);
     expect(await vault.describe()).not.toBeNull();
@@ -114,7 +121,7 @@ describe('createVault', () => {
 
   it('efface le coffre à la demande', async () => {
     const { area } = fakeArea();
-    const vault = createVault(crypto, area);
+    const vault = createVault(crypto, area, TEST_ITERATIONS);
     await vault.store(COOKIES, 'phrase', 1000);
     await vault.clear();
     expect(await vault.describe()).toBeNull();
@@ -139,14 +146,14 @@ describe('createVault', () => {
 
   it('traite un coffre effacé par écriture de null comme absent', async () => {
     const { area } = fakeArea({ [VAULT_KEY]: null });
-    const vault = createVault(crypto, area);
+    const vault = createVault(crypto, area, TEST_ITERATIONS);
     expect(await vault.describe()).toBeNull();
     await expect(vault.read('phrase')).rejects.toThrow(/aucun coffre/i);
   });
 
   it("refuse un enregistrement dont le compte d'itérations est aberrant", async () => {
     const { area, data } = fakeArea();
-    const vault = createVault(crypto, area);
+    const vault = createVault(crypto, area, TEST_ITERATIONS);
     await vault.store(COOKIES, 'phrase correcte', 1000);
 
     // Le compte d'itérations est relu du stockage et passé à PBKDF2 : une
