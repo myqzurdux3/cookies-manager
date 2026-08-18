@@ -193,4 +193,35 @@ describe('DEFAULT_PROFILES', () => {
       expect(profile.categories).not.toContain('formData');
     }
   });
+
+describe('validation de la forme des profils importés', () => {
+  // Supprimer ces six lignes de profiles.ts laissait les 198 tests verts.
+  const store = () => createProfileStore(fakeArea());
+
+  it('refuse un identifiant qui n’est pas une chaîne', async () => {
+    const json = JSON.stringify([{ id: 42, name: 'x', since: 'all', categories: [], keepRules: [] }]);
+    await expect(store().importJson(json)).rejects.toThrow(/format de profils invalide/);
+  });
+
+  it('refuse un nom qui n’est pas une chaîne', async () => {
+    const json = JSON.stringify([{ id: 'a', name: null, since: 'all', categories: [], keepRules: [] }]);
+    await expect(store().importJson(json)).rejects.toThrow(/format de profils invalide/);
+  });
+
+  it('refuse des catégories qui ne sont pas un tableau', async () => {
+    const json = JSON.stringify([{ id: 'a', name: 'x', since: 'all', categories: 'cookies', keepRules: [] }]);
+    await expect(store().importJson(json)).rejects.toThrow(/format de profils invalide/);
+  });
+
+  it('refuse une keep-list qui n’est pas un tableau', async () => {
+    const json = JSON.stringify([{ id: 'a', name: 'x', since: 'all', categories: [], keepRules: {} }]);
+    await expect(store().importJson(json)).rejects.toThrow(/format de profils invalide/);
+  });
+
+  it('refuse un profil qui n’est pas un objet', async () => {
+    await expect(store().importJson(JSON.stringify(['pas un profil']))).rejects.toThrow(
+      /format de profils invalide/,
+    );
+  });
+});
 });

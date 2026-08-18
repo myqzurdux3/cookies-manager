@@ -47,11 +47,16 @@ export function createStorageCleaner(
     perSite: 'origin',
 
     async preview(plan: CategoryPlan): Promise<Preview> {
-      const origins = await protectedOrigins(plan, knownHosts);
+      // Compter les origines puis diviser par deux supposerait que l'expansion
+      // rende toujours exactement un https et un http par hôte : un invariant
+      // couplé et silencieux. On compte les hôtes.
+      const hosts = new Set(
+        (await protectedOrigins(plan, knownHosts)).map((origin) => new URL(origin).host),
+      );
       return {
         countable: false,
         items: 0,
-        note: `${origins.length / 2} origine(s) protégée(s). ${PARTIAL_NOTE}`,
+        note: `${hosts.size} origine(s) protégée(s). ${PARTIAL_NOTE}`,
       };
     },
 

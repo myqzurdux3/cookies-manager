@@ -21,7 +21,7 @@ export const DEFAULT_PROFILES: Profile[] = [
     name: 'Nettoyage léger',
     since: 'day',
     categories: ['cookies', 'httpCache'],
-    keepRules: [{ pattern: '*', keep: {} }],
+    keepRules: [],
   },
   {
     id: 'full',

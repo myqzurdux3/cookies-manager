@@ -7,8 +7,20 @@ describe('manifest', () => {
   });
 
   it('ne demande que les permissions de base, les autres restant optionnelles', () => {
-    expect(manifest.permissions.sort()).toEqual(['browsingData', 'cookies', 'storage']);
-    expect(manifest.optional_permissions.sort()).toEqual(['contentSettings', 'downloads', 'history']);
+    // Trier une copie : `sort()` trie sur place le tableau du module JSON
+    // importé, donc un état partagé entre tests.
+    expect([...manifest.permissions].sort()).toEqual(['browsingData', 'cookies', 'storage']);
+    expect([...manifest.optional_permissions].sort()).toEqual([
+      'contentSettings',
+      'downloads',
+      'history',
+    ]);
+  });
+
+  it("déclare <all_urls>, la permission d'installation la plus large", () => {
+    // Elle est nécessaire aux opérations sur les cookies. Ce test existe pour
+    // qu'un élargissement supplémentaire soit un choix, pas un accident.
+    expect(manifest.host_permissions).toEqual(['<all_urls>']);
   });
 
   it('interdit tout script distant', () => {
