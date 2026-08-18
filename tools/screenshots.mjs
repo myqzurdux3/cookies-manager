@@ -9,6 +9,7 @@
  *   npm run build && node tools/screenshots.mjs
  */
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -26,6 +27,17 @@ const BROWSERS = [
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Identifiant d'une extension non empaquetée : Chrome le dérive du chemin
+ * absolu du dossier — les 128 premiers bits du SHA-256, chaque quartet mappé
+ * sur `a`..`p`. Le calculer évite d'aller le deviner parmi les cibles du
+ * navigateur, où l'on tombe sur les extensions internes de Chrome.
+ */
+function extensionIdDepuis(chemin) {
+  const empreinte = createHash('sha256').update(chemin).digest('hex').slice(0, 32);
+  return [...empreinte].map((c) => String.fromCharCode(97 + parseInt(c, 16))).join('');
+}
 
 async function findBrowser() {
   for (const name of BROWSERS) {
@@ -219,8 +231,7 @@ try {
   }
   // Travailler depuis une page de l'extension plutôt que depuis son service
   // worker : même accès aux API, et pas de suspension possible.
-  const cible = await waitFor((t) => t.url.startsWith('chrome-extension://'));
-  const extensionId = new URL(cible.url).host;
+  const extensionId = extensionIdDepuis(DIST.replace(/\/$/, ''));
   await fetch(`http://127.0.0.1:${PORT}/json/new?chrome-extension://${extensionId}/options.html`, {
     method: 'PUT',
   });

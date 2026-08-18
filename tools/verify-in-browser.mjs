@@ -15,6 +15,7 @@
  * personnel n'est jamais touché.
  */
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { access, mkdtemp, rm } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -39,6 +40,17 @@ function check(label, ok, detail) {
 }
 
 /** Parcourt PATH à la main : lancer un shell pour ça ouvrirait une injection. */
+/**
+ * Identifiant d'une extension non empaquetée : Chrome le dérive du chemin
+ * absolu du dossier — les 128 premiers bits du SHA-256, chaque quartet mappé
+ * sur `a`..`p`. Le calculer évite d'aller le deviner parmi les cibles du
+ * navigateur, où l'on tombe sur les extensions internes de Chrome.
+ */
+function extensionIdDepuis(chemin) {
+  const empreinte = createHash('sha256').update(chemin).digest('hex').slice(0, 32);
+  return [...empreinte].map((c) => String.fromCharCode(97 + parseInt(c, 16))).join('');
+}
+
 async function findBrowser() {
   const dirs = (process.env.PATH ?? '').split(':').filter(Boolean);
   for (const name of BROWSERS) {
@@ -226,12 +238,10 @@ let code = 0;
 try {
   await attendreNavigateur();
 
-  // On identifie l'extension par n'importe laquelle de ses cibles, puis on
-  // travaille uniquement depuis une de ses pages. Une page a le même accès aux
-  // API qu'un service worker, et elle ne se suspend pas : s'attacher à un
-  // worker le laisse parfois figé, et son contexte n'expose alors rien.
-  const cible = await waitFor((t) => t.url.startsWith('chrome-extension://'));
-  const extensionId = new URL(cible.url).host;
+  // On travaille uniquement depuis une page de l'extension. Une page a le même
+  // accès aux API qu'un service worker, et elle ne se suspend pas : s'attacher
+  // à un worker le laisse parfois figé, et son contexte n'expose alors rien.
+  const extensionId = extensionIdDepuis(DIST.replace(/\/$/, ''));
   console.log(`Navigateur : ${browser}\nExtension  : ${extensionId}\n`);
 
   await fetch(`http://127.0.0.1:${PORT}/json/new?chrome-extension://${extensionId}/options.html`, {
