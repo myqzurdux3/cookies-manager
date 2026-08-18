@@ -114,4 +114,87 @@ describe('popup', () => {
     expect(text('#preview-list')).toMatch(/permissions refusées/i);
     expect(document.querySelector<HTMLButtonElement>('#confirm')!.disabled).toBe(true);
   });
+
+  it('affiche le rapport, le total et les sites épargnés après un nettoyage', async () => {
+    await mountPopup((type) =>
+      type === 'CLEAN'
+        ? ok([
+            { category: 'cookies', report: { status: 'ok', deleted: 3, kept: 1 } },
+            {
+              category: 'httpCache',
+              report: { status: 'ok', deleted: 0, kept: 0, countable: false },
+            },
+          ])
+        : HAPPY(type),
+    );
+
+    clickProfile();
+    await settle();
+    document.querySelector<HTMLButtonElement>('#confirm')!.click();
+    await settle();
+
+    expect(document.querySelector<HTMLElement>('#report')!.hidden).toBe(false);
+    expect(document.querySelector<HTMLElement>('#preview')!.hidden).toBe(true);
+    expect(text('#report-summary')).toContain('3 éléments supprimés');
+    // Une catégorie vidée en bloc ne doit pas se lire « 0 supprimé ».
+    expect(text('#report-list')).toContain('vidé entièrement');
+    expect(text('#report-summary')).toContain('catégorie vidée entièrement');
+    expect(document.querySelector<HTMLElement>('#spared')!.hidden).toBe(false);
+    expect(text('#spared-list')).toContain('github.com');
+  });
+
+  it('signale un échec partiel plutôt que de le fondre dans le total', async () => {
+    await mountPopup((type) =>
+      type === 'CLEAN'
+        ? ok([
+            {
+              category: 'cookies',
+              report: { status: 'partial', deleted: 2, kept: 0, error: 'cookie verrouillé' },
+            },
+          ])
+        : HAPPY(type),
+    );
+
+    clickProfile();
+    await settle();
+    document.querySelector<HTMLButtonElement>('#confirm')!.click();
+    await settle();
+
+    expect(text('#report-list')).toContain('cookie verrouillé');
+    expect(text('#report-summary')).toContain('catégorie en échec');
+  });
+
+  it('revient à la liste des profils depuis le rapport comme depuis l’aperçu', async () => {
+    await mountPopup(HAPPY);
+
+    clickProfile();
+    await settle();
+    document.querySelector<HTMLButtonElement>('#cancel')!.click();
+    expect(document.querySelector<HTMLElement>('#chooser')!.hidden).toBe(false);
+
+    clickProfile();
+    await settle();
+    document.querySelector<HTMLButtonElement>('#confirm')!.click();
+    await settle();
+    document.querySelector<HTMLButtonElement>('#done')!.click();
+    expect(document.querySelector<HTMLElement>('#chooser')!.hidden).toBe(false);
+    expect(document.querySelector<HTMLElement>('#report')!.hidden).toBe(true);
+  });
+
+  it('verrouille le bouton derrière la case rouge pour un profil dangereux', async () => {
+    await mountPopup((type) =>
+      type === 'LIST_PROFILES' ? ok([{ ...PROFILE, categories: ['passwords'] }]) : HAPPY(type),
+    );
+
+    clickProfile();
+    await settle();
+    const confirm = document.querySelector<HTMLButtonElement>('#confirm')!;
+    expect(document.querySelector<HTMLElement>('#danger')!.hidden).toBe(false);
+    expect(confirm.disabled).toBe(true);
+
+    const check = document.querySelector<HTMLInputElement>('#danger-check')!;
+    check.checked = true;
+    check.dispatchEvent(new Event('change'));
+    expect(confirm.disabled).toBe(false);
+  });
 });
