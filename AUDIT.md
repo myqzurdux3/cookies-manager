@@ -430,3 +430,98 @@ les défauts corrigés ici.
 7. **Vérifier la CI au premier push** : elle n'a jamais tourné sur GitHub. Le
    job « icons » installe Pillow et compare le résultat aux fichiers versionnés,
    ce qui est vrai localement mais dépend de la version de Pillow de l'exécuteur.
+
+---
+
+## Phase 7 — vérification dans un navigateur réel
+
+Le rapport ci-dessus disait qu'aucune conclusion n'avait été observée. Ce n'est
+plus vrai pour la majorité d'entre elles.
+
+**Méthode.** Brave 150 (Chromium 150.0.7871.114) installé sur la machine, lancé
+en `--headless=new` avec un profil neuf jeté après coup, l'extension chargée par
+`--load-extension`, piloté par le protocole DevTools depuis un script Node — le
+`WebSocket` global de Node 22+ suffit, aucune dépendance ajoutée. Le navigateur
+de l'utilisateur n'a jamais été touché : instance séparée, port dédié,
+`--user-data-dir` dans le répertoire de travail temporaire.
+
+Chromium 150 est postérieur à 144, donc la dépréciation des mots de passe
+s'applique.
+
+### Confirmé
+
+| Question                                                                   | Résultat observé                                                                                                                                                                                                           |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `contentSettings.get()` rend-il `'default'` ?                              | **Non.** Il rend la valeur effective : `ask` pour notifications, location, camera, microphone, automaticDownloads ; `block` pour popups. La table `MANAGED_DEFAULTS` du correctif `ca4913f` est exacte, valeur par valeur. |
+| `contentSettings.clear()` efface-t-il les autorisations de l'utilisateur ? | **Non.** Deux exceptions injectées dans les préférences du profil (`allow` et `block` sur notifications) sont **inchangées** après `clear({scope:'regular'})`. Le constat bloquant passe de « à vérifier » à **observé**.  |
+| Une règle d'extension masque-t-elle la préférence utilisateur ?            | **Oui.** `allow` de l'utilisateur → `block` après `set()` de l'extension → retour à `allow` après `clear()`. L'extension peut masquer, jamais supprimer.                                                                   |
+| `browsingData.remove({passwords: true})`                                   | **Résout sans erreur, sans rien supprimer.** `browsingData.settings()` rapporte par ailleurs `passwords: false`. Le correctif `a1bf34e` est justifié.                                                                      |
+| `excludeOrigins` avec `{cache: true}`                                      | **Accepté.** Le cache HTTP est bien filtrable par origine, contrairement à ce que le code affirmait.                                                                                                                       |
+| `excludeOrigins` avec `{history: true}`                                    | **Refusé** : `At least one data type doesn't support filtering by origin.`                                                                                                                                                 |
+| `history.deleteUrl` respecte-t-il une période ?                            | **Non.** Deux visites avant, zéro après. Confirmé.                                                                                                                                                                         |
+| `cookies.remove` sur un cookie inexistant                                  | **Ne rejette pas** : résout avec `{name, storeId, url}` et sans `lastError`. Le `catch` de `cookies.ts` ne se déclenche donc jamais dans ce cas.                                                                           |
+
+### Réfuté — et cela corrige une affirmation de ce rapport
+
+**`history.search` : `endTime` est exclusif.** Mesuré : `endTime === lastVisitTime`
+rend 0 résultat, `endTime === lastVisitTime + 1` en rend 1.
+
+Le commit `2106012` annonçait « mesuré sur un jeu de 4 entrées paginé par 2 :
+aperçu 7, suppressions 4 ». Cette divergence a été obtenue contre un faux qui
+modélisait `endTime` comme **inclusif**. Puisqu'il est exclusif, **la divergence
+entre l'aperçu et le nettoyage ne se produit pas dans un vrai navigateur.**
+
+Le correctif reste en place mais change de nature : il n'est plus la correction
+d'un défaut observable, c'est une ceinture de sécurité. La justification qui
+tient encore est que Chrome ne documente aucun ordre de tri pour
+`history.search`, donc rien ne garantit qu'une entrée sans `lastVisitTime`
+arrive en dernière page.
+
+### Le parcours complet de l'extension, exécuté
+
+Quatre cookies sur trois domaines, deux entrées d'historique, un profil gardant
+`*.garde.test` pour les cookies et l'historique. Messages envoyés depuis la vraie
+page d'options, donc par le vrai chemin `sendMessage` :
+
+- **Aperçu** : 1 cookie et 1 entrée d'historique à supprimer.
+- **Nettoyage** : cookies `deleted: 1, kept: 3`, historique `deleted: 1, kept: 1`.
+- **Survivants** : `garde.test:pub`, `garde.test:session`,
+  `sous.garde.test:session`, `https://garde.test/page`. Le wildcard couvre bien
+  l'apex et le sous-domaine ; `efface.test` a disparu des deux côtés.
+- **Message inconnu** : `{"ok": false, "error": "message inconnu : \"TOUT_DETRUIRE\""}`
+  — le correctif `2d7526b` vérifié en conditions réelles.
+
+### Le coffre, de bout en bout
+
+Coffre activé, profil supprimant cookies, stockage local, mots de passe, données
+de formulaire et cache HTTP, cinq cookies en place :
+
+- Rapport de nettoyage : `localStorage`, `formData` et `httpCache` portent bien
+  `countable: false` — le correctif `7d63c0c` vérifié en conditions réelles.
+- `passwords` rend `status: "failed"` avec le message renvoyant vers les
+  paramètres de Chrome — le correctif `a1bf34e` vérifié en conditions réelles.
+- Les cinq cookies disparaissent réellement.
+- `VAULT_DESCRIBE` : 5 cookies sur 4 domaines.
+- Restauration avec une mauvaise phrase : `phrase incorrecte, ou coffre altéré`.
+- Restauration avec la bonne : `restored: 5, failures: []`, et les cinq cookies
+  reviennent **avec leurs valeurs d'origine**.
+
+C'est le chemin le plus critique du projet, et il n'avait jamais été exécuté.
+
+### Ce qui reste non vérifié, même après cette phase
+
+- **La suppression réelle des mots de passe** n'a pas été prouvée par
+  l'absurde : je n'ai pas injecté de mot de passe enregistré dans le profil
+  (base SQLite chiffrée). La conclusion repose sur trois indices concordants —
+  la note de dépréciation, `settings()` qui rapporte `passwords: false`, et
+  l'appel qui résout sans effet.
+- **Le plafond de 1000 de `downloads.search`** : un profil neuf n'a aucun
+  téléchargement, le test ne prouve rien. La correction repose sur la
+  documentation.
+- **Les cookies partitionnés** n'ont pas été mis en place : cela demande un vrai
+  site tiers en HTTPS.
+- **`since` sur les types de stockage** reste indéterminé.
+- **Tout ce qui est visuel** : mise en page, thème sombre, lisibilité. Le mode
+  headless ne dit rien là-dessus.
+- **La recette manuelle** reste à jouer par un humain, dans un navigateur
+  visible, avec de vrais sites connectés.
