@@ -22,11 +22,11 @@ export type ChromeLike = BrowsingDataApi &
 export async function collectKnownHosts(api: ChromeLike): Promise<string[]> {
   const hosts = new Set<string>();
 
-  try {
-    for (const cookie of await api.cookies.getAll({})) hosts.add(normalizeHost(cookie.domain));
-  } catch {
-    // API indisponible : on continue avec ce qu'on a.
-  }
+  // `cookies` est une permission obligatoire du manifeste : si elle échoue, la
+  // liste d'hôtes serait incomplète et les règles à wildcard ne protégeraient
+  // qu'une partie des sites. L'erreur remonte donc au moteur, qui marque la
+  // catégorie en échec — mieux vaut ne rien supprimer que sous-protéger.
+  for (const cookie of await api.cookies.getAll({})) hosts.add(normalizeHost(cookie.domain));
 
   try {
     const items = (await api.history?.search({ text: '', startTime: 0, maxResults: 5000 })) ?? [];

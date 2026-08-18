@@ -61,4 +61,15 @@ describe('collectKnownHosts', () => {
     } as never;
     expect(await collectKnownHosts(partial)).toEqual([]);
   });
+
+  it("remonte l'erreur si même les cookies sont refusés", async () => {
+    const refused = {
+      cookies: {
+        async getAll(): Promise<never> {
+          throw new Error('permission cookies refusée');
+        },
+      },
+    } as never;
+    await expect(collectKnownHosts(refused)).rejects.toThrow(/permission cookies refusée/);
+  });
 });
