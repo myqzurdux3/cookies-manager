@@ -217,3 +217,52 @@ vaut bien 310 000.
 - L'effet réel de `excludeOrigins` sur le cache HTTP n'a pas été mesuré.
 - Le coût réel de la non-mémoïsation (`background.ts:48`) est démontré structurellement,
   mais son ampleur en millisecondes n'a pas été mesurée.
+
+---
+
+## Phase 2 — Code mort et dépendances
+
+Méthode : pour chacun des 95 symboles exportés de `src/`, un `grep -rn '\bSYMBOL\b' src/ tests/
+*.html vite.config.ts` filtré de sa propre ligne de définition. Un symbole n'est déclaré mort
+que si ce grep ne rend rien.
+
+### Résultat général
+
+Le dépôt est **propre** sur ce plan. Zéro dépendance inutilisée, zéro import non déclaré, zéro
+fichier jamais importé, zéro symbole de module non exporté et non utilisé, zéro asset orphelin
+dans `public/`. Les 4 devDependencies sont toutes prouvées utilisées. Aucun `TODO`, `FIXME`,
+`HACK`, `@ts-ignore` ni bloc de code commenté dans tout `src/`.
+
+### Supprimable sans risque — fait, commit `7b860d9`
+
+| Élément | Preuve |
+|---|---|
+| `src/ui/theme.css:102` règle `.logo` | `grep -rn logo src/ tests/ *.html` ne rend que la définition et `logo.svg` ; le HTML utilise `.brand-mark`. |
+| `package.json:17-19` clé `allowScripts` | Aucun gestionnaire ne lit cette clé. C'est de la configuration `@lavamoat/allow-scripts` — absent de `node_modules`, absent du lockfile — et sa place canonique serait `lavamoat.allowScripts`. |
+| `export` sur `protectedOrigins` (`storage.ts:21`) | `grep -rn protectedOrigins src/ tests/` hors du fichier : aucun résultat. |
+
+198 tests verts, typecheck et build OK après suppression.
+
+### Probablement mort — à confirmer par toi, rien n'a été touché
+
+| Élément | Preuve de non-usage | Pourquoi je ne l'ai pas supprimé |
+|---|---|---|
+| `Cleaner.perSite` (`src/core/types.ts:67`) | Écrit par les 8 fabriques de cleaners, **lu zéro fois** en production : `grep -rn "perSite" src/ \| grep -v "perSite: '"` ne rend que la déclaration. Lu uniquement par 8 assertions de test. | C'est un troisième exemplaire du même fait, avec `PER_SITE` et `COLUMNS`/`UNFILTERABLE`. Le supprimer, le garder ou en faire la source unique est une décision de conception, pas un nettoyage. |
+| `PER_SITE` (`src/ui/options/grid.ts:3`) | Zéro référence dans `src/`, y compris dans son propre fichier. | **Il sert d'oracle** à deux tests (`tests/ui/grid.test.ts:35-42`) qui vérifient que la grille ne montre que des catégories filtrables. Le supprimer déplacerait la constante dans le fichier de test et affaiblirait le contrôle : aucun gain mesurable. |
+| `KeepRule.keepCookies` (`src/core/types.ts:33`) | `grep -rn keepCookies src/ui/` : aucun résultat. Le seul lecteur est `matcher.cookieProtection`. Seule voie d'écriture : le champ d'import JSON (`options.html:127`). | Ce n'est pas du code mort mais une fonctionnalité sans interface. Trois issues : construire l'interface, documenter le contrat, ou retirer le champ. À toi. |
+| `relevantRules` (`src/cleaners/siteSettings.ts:31`) | Prédicat identique à celui déjà appliqué par `buildPlan` (`planner.ts:31`), seul producteur de `CategoryPlan` en production : no-op démontrable. | Deux tests construisent des plans à la main sans passer par `buildPlan` (`siteSettings.test.ts:59-65`, `:74-79`) et en dépendent. `storage.ts:27` fait l'inverse et fait confiance à `buildPlan` : l'incohérence entre les deux cleaners est réelle, mais la trancher demande de choisir un contrat. |
+| Branches inatteignables en production | `engine.ts:18-25,49-54,76-79` (`missing()`) : `buildCleaners` rend les 11 cleaners de `ALL_CATEGORIES`, et `profiles.ts:73` rejette toute autre catégorie à l'import. `vault.ts:194` (repli `set(null)`) : gardé par `area.remove !== undefined`, et `chrome.storage.local` a toujours `remove`. | Ce sont des gardes défensives dont les tests dépendent. Les retirer économise dix lignes et supprime un filet. Non rentable. |
+
+### Fichiers et configuration
+
+- `tools/make-icons.py` : hors chaîne de build, aucun script npm ne l'invoque — mais documenté
+  dans le README comme outil manuel. Ce n'est pas un orphelin.
+- `.superpowers/` : **non versionné**, auto-ignoré par `.superpowers/sdd/.gitignore` (`*`).
+- `docs/superpowers/` : **versionné** — 3728 lignes de plan et de spec de génération.
+  Voir la phase 5.
+- `dist/` : non versionné, ignoré depuis le premier commit. Contient un build **périmé**
+  (`dist/types.js`, `dist/labels.js` : noms de chunks d'une configuration antérieure).
+- **Aucune CI n'existe** : pas de `.github/`, aucun `.yml` dans le dépôt.
+- `node_modules` contient 66 paquets `extraneous` (`@vitest/coverage-v8` et ses transitives),
+  installés pour mesurer la couverture de cet audit et absents de `package.json`. `npm ci` les
+  retirerait. Voir la phase 6.
