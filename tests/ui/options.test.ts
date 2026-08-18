@@ -114,4 +114,112 @@ describe('page d’options', () => {
     await settle();
     expect(text('#status')).toContain('coffre verrouillé');
   });
+
+  it('normalise un motif à la saisie et le dit', async () => {
+    await mountOptions(HAPPY);
+    const champ = document.querySelector<HTMLInputElement>('#new-pattern')!;
+    champ.value = '*google.com';
+    click('#add-pattern');
+    await settle();
+
+    expect(text('#keeplist')).toContain('*.google.com');
+    expect(text('#status')).toContain('*.google.com');
+    expect(champ.value).toBe('');
+  });
+
+  it('refuse un motif impossible à corriger, avec sa raison', async () => {
+    await mountOptions(HAPPY);
+    document.querySelector<HTMLInputElement>('#new-pattern')!.value = 'git*hub.com';
+    click('#add-pattern');
+    await settle();
+
+    expect(text('#status')).toMatch(/wildcard/i);
+    expect(text('#keeplist')).not.toContain('git*hub.com');
+  });
+
+  it('refuse un doublon plutôt que d’empiler deux fois le même site', async () => {
+    await mountOptions(HAPPY);
+    document.querySelector<HTMLInputElement>('#new-pattern')!.value = 'github.com';
+    click('#add-pattern');
+    await settle();
+    document.querySelector<HTMLInputElement>('#new-pattern')!.value = 'github.com';
+    click('#add-pattern');
+    await settle();
+
+    expect(text('#status')).toMatch(/déjà dans la liste/i);
+    const lignes = Array.from(
+      document.querySelectorAll<HTMLTableRowElement>('#keeplist tr'),
+    ).filter((tr) => tr.textContent?.startsWith('github.com') === true);
+    expect(lignes).toHaveLength(1);
+  });
+
+  it('enregistre le profil courant et signale un refus', async () => {
+    const chrome = await mountOptions(HAPPY);
+    document.querySelector<HTMLInputElement>('#name')!.value = 'Renommé';
+    document
+      .querySelector<HTMLFormElement>('#editor')!
+      .dispatchEvent(new Event('submit', { cancelable: true }));
+    await settle();
+    const envoye = chrome.sent.find((m) => m.type === 'SAVE_PROFILE') as
+      { profile: { name: string } } | undefined;
+    expect(envoye?.profile.name).toBe('Renommé');
+    expect(text('#status')).toContain('enregistré');
+  });
+
+  it('affiche le refus du moteur quand un profil est invalide', async () => {
+    await mountOptions((type) =>
+      type === 'SAVE_PROFILE' ? { ok: false, error: 'motif refusé' } : HAPPY(type),
+    );
+    document
+      .querySelector<HTMLFormElement>('#editor')!
+      .dispatchEvent(new Event('submit', { cancelable: true }));
+    await settle();
+    expect(text('#status')).toContain('motif refusé');
+  });
+
+  it('refuse une restauration sans phrase, puis en transmet une', async () => {
+    const chrome = await mountOptions(HAPPY);
+    click('#vault-restore');
+    await settle();
+    expect(chrome.sent.some((m) => m.type === 'VAULT_RESTORE')).toBe(false);
+    expect(text('#status')).toMatch(/phrase secrète requise/i);
+
+    const champ = document.querySelector<HTMLInputElement>('#vault-passphrase')!;
+    champ.value = 'ma phrase';
+    click('#vault-restore');
+    await settle();
+    expect(chrome.sent.some((m) => m.type === 'VAULT_RESTORE')).toBe(true);
+    // La phrase ne doit pas rester dans le champ après l'appel.
+    expect(champ.value).toBe('');
+  });
+
+  it('enregistre les réglages du coffre et rapporte un refus', async () => {
+    const chrome = await mountOptions((type) =>
+      type === 'SAVE_SETTINGS' ? { ok: false, error: 'rétention invalide' } : HAPPY(type),
+    );
+    document.querySelector<HTMLInputElement>('#vault-retention')!.value = '0';
+    click('#save-settings');
+    await settle();
+    expect(chrome.sent.some((m) => m.type === 'SAVE_SETTINGS')).toBe(true);
+    expect(text('#status')).toContain('rétention invalide');
+  });
+
+  it('importe un JSON et signale un import refusé', async () => {
+    await mountOptions((type) =>
+      type === 'IMPORT' ? { ok: false, error: 'format de profils invalide' } : HAPPY(type),
+    );
+    document.querySelector<HTMLTextAreaElement>('#import-area')!.value = 'pas du json';
+    click('#import');
+    await settle();
+    expect(text('#status')).toContain('format de profils invalide');
+  });
+
+  it('exporte les profils dans la zone de texte', async () => {
+    await mountOptions((type) => (type === 'EXPORT' ? ok('[{"id":"p1"}]') : HAPPY(type)));
+    click('#export');
+    await settle();
+    expect(document.querySelector<HTMLTextAreaElement>('#import-area')!.value).toBe(
+      '[{"id":"p1"}]',
+    );
+  });
 });

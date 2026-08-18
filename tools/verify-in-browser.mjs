@@ -104,6 +104,24 @@ async function waitFor(pred, extensionId, page = 'popup.html') {
   throw new Error('cible introuvable dans le navigateur');
 }
 
+/**
+ * Le service worker peut apparaître dans la liste des cibles avant que les API
+ * de l'extension y soient liées : `chrome.cookies` est alors `undefined`. On
+ * attend qu'il réponde vraiment avant de lui demander quoi que ce soit.
+ */
+async function attendrePret(client, timeoutMs = 20000) {
+  const limite = Date.now() + timeoutMs;
+  while (Date.now() < limite) {
+    const pret = await evaluate(
+      client,
+      `return typeof chrome?.cookies?.set === 'function' && typeof chrome?.storage?.local?.set === 'function';`,
+    ).catch(() => false);
+    if (pret === true) return;
+    await sleep(300);
+  }
+  throw new Error("les API de l'extension ne sont pas devenues disponibles");
+}
+
 async function evaluate(client, expression) {
   const r = await client.send('Runtime.evaluate', {
     expression: `(async () => { ${expression} })()`,
@@ -203,6 +221,7 @@ try {
 
   const swClient = await cdp(sw.webSocketDebuggerUrl);
   await swClient.send('Runtime.enable');
+  await attendrePret(swClient);
 
   await fetch(`http://127.0.0.1:${PORT}/json/new?chrome-extension://${extensionId}/options.html`, {
     method: 'PUT',
