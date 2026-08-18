@@ -597,11 +597,30 @@ tous invisibles sur la machine où il avait été écrit :
    commande attribue son propre identifiant, que le script jetait au profit de
    celui calculé. Il ouvrait donc la page d'une extension inexistante.
 
+7. **Contexte de page pris avant navigation.** S'attacher à une cible
+   fraîchement ouverte donne parfois le contexte de la page vide qui la
+   précède, et ce contexte-là ne change plus. Corrigé par une navigation
+   explicite suivie de l'attente de `Page.loadEventFired`.
+
+**Et malgré tout cela, le job n'est jamais passé au vert.** Au huitième
+passage, le diagnostic est net : l'extension **est** chargée sur l'exécuteur —
+ses deux cibles `chrome-extension://…/options.html` sont visibles — mais le
+contexte de ses pages n'expose toujours aucun `chrome.*`. La cause n'est pas
+identifiée.
+
+**Décision : le job est retiré de la CI.** Un job rouge en permanence
+n'apprend rien à personne, et le maquiller en non bloquant serait pire. La
+vérification en navigateur reste une étape locale, documentée dans
+`CONTRIBUTING.md`, et le script rapporte désormais `typeof chrome`, les espaces
+de noms présents et l'URL évaluée — de quoi reprendre le sujet sans repartir de
+zéro.
+
 Ce n'est pas une anecdote d'outillage. Un script de vérification qui ne tourne
-que sur une machine ne vérifie rien de reproductible, et **cinq de ces six
+que sur une machine ne vérifie rien de reproductible, et **six de ces sept
 défauts venaient d'hypothèses tacites sur le temps ou sur l'environnement** —
 exactement le genre d'hypothèse que le reste de cet audit a passé son temps à
-débusquer dans le code de l'extension.
+débusquer dans le code de l'extension. Le huitième problème, lui, reste
+ouvert.
 
 ### État final
 

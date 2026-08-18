@@ -58,6 +58,13 @@ personnel n'est jamais touché.
 
 Ce script ne vérifie rien de visuel.
 
+**Il ne tourne pas en intégration continue.** Sur l'exécuteur GitHub,
+l'extension se charge — ses cibles sont visibles — mais le contexte de ses
+pages n'expose aucun `chrome.*`, et la cause n'a pas été identifiée. C'est donc
+une étape locale, à lancer avant toute publication. Si vous trouvez pourquoi,
+le job est prêt à être rétabli : le script rapporte `typeof chrome`, les
+espaces de noms présents et l'URL évaluée en cas d'échec.
+
 ## Recette manuelle
 
 Les tests unitaires ne touchent aucun navigateur, et le script ci-dessus ne voit

@@ -156,12 +156,18 @@ async function attendrePret(client, timeoutMs = 30000, extensionId = null) {
   let derniereErreur = 'aucune';
   while (Date.now() < limite) {
     try {
-      const pret = await evaluate(
+      const etat = await evaluate(
         client,
-        `return typeof chrome?.cookies?.set === 'function' && typeof chrome?.storage?.local?.set === 'function';`,
+        `return JSON.stringify({
+           pret: typeof chrome?.cookies?.set === 'function' && typeof chrome?.storage?.local?.set === 'function',
+           chrome: typeof chrome,
+           espaces: typeof chrome === 'object' && chrome !== null ? Object.keys(chrome).sort().join(',') : null,
+           url: location.href,
+         });`,
       );
+      const { pret, chrome: typeChrome, espaces, url } = JSON.parse(etat);
       if (pret === true) return;
-      derniereErreur = `API absentes (chrome ${typeof pret})`;
+      derniereErreur = `typeof chrome=${typeChrome}, espaces=[${espaces ?? '—'}], url=${url}`;
     } catch (cause) {
       derniereErreur = cause instanceof Error ? cause.message : String(cause);
     }

@@ -42,19 +42,16 @@ jobs:
           test -f dist/options.html
           test -f dist/icons/icon-128.png
 
-  browser:
-    # La suite de tests ne charge aucun navigateur : elle parle à de faux
-    # objets `chrome.*`. Ce job exerce l'extension pour de vrai.
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-      - run: npm ci
-      - run: npm run build
-      - run: npm run verify:browser
+  # Il n'y a volontairement pas de job qui exerce l'extension dans un vrai
+  # navigateur. `npm run verify:browser` fonctionne en local (Brave 150,
+  # Chrome), mais pas sur l'exécuteur GitHub : l'extension s'y charge bien —
+  # ses cibles `chrome-extension://` sont visibles — et pourtant le contexte de
+  # ses pages n'expose aucun `chrome.*`. Huit tentatives n'ont pas identifié la
+  # cause ; le script rapporte désormais `typeof chrome`, les espaces de noms
+  # présents et l'URL évaluée, de quoi reprendre le sujet.
+  #
+  # Un job rouge en permanence n'apprend rien à personne. La vérification en
+  # navigateur reste une étape locale, décrite dans CONTRIBUTING.md.
 
   icons:
     # Le logo est généré : si le script et les fichiers versionnés divergent,
