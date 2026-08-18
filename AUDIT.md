@@ -266,3 +266,167 @@ dans `public/`. Les 4 devDependencies sont toutes prouvées utilisées. Aucun `T
 - `node_modules` contient 66 paquets `extraneous` (`@vitest/coverage-v8` et ses transitives),
   installés pour mesurer la couverture de cet audit et absents de `package.json`. `npm ci` les
   retirerait. Voir la phase 6.
+
+---
+
+## Phases 3 à 6 — ce qui a été fait
+
+Chaque correction a suivi la même règle : un test qui échoue d'abord, la
+correction ensuite, un commit par correctif. Les seules exceptions sont
+signalées nommément plus bas.
+
+### État initial contre état final
+
+| Mesure                       | Avant                                              | Après                                                                        |
+| ---------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Tests                        | 198 / 17 fichiers                                  | **256 / 20 fichiers**                                                        |
+| Couverture (stmts)           | 62,63 %                                            | **83,26 %**                                                                  |
+| `src/background.ts`          | 0 %                                                | routage extrait et testé (`src/core/router.ts`, 6 tests)                     |
+| `src/ui/popup/popup.ts`      | 0 %                                                | **79,2 %**                                                                   |
+| `src/ui/options/options.ts`  | 0 %                                                | **64,8 %**                                                                   |
+| `src/core/messages.ts`       | 0 %                                                | **100 %**                                                                    |
+| Durée de la suite            | 1,84 s                                             | 1,67 s malgré 58 tests de plus                                               |
+| `npm audit`                  | 5 vulnérabilités (1 critique, 1 haute, 3 modérées) | **0**                                                                        |
+| Dépendances à l'exécution    | 0                                                  | **0** — inchangé, c'est voulu                                                |
+| Dépendances de développement | 4                                                  | 10 (prettier, eslint, typescript-eslint, @eslint/js, happy-dom, coverage-v8) |
+| Formateur / linter           | aucun                                              | prettier + eslint, `npm run lint` et `format:check` verts                    |
+| CI                           | aucune                                             | GitHub Actions, matrice Node 20/22/24                                        |
+| Licence                      | absente                                            | MIT                                                                          |
+| Lignes (`src` + `tests`)     | 4476                                               | 6030                                                                         |
+
+### Corrections, du plus grave au plus bénin
+
+| Commit                          | Correction                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `a1bf34e`                       | **Mots de passe.** Depuis Chrome 144 (stable le 13/01/2026), `browsingData.remove` ignore le type `passwords` : l'appel réussit sans rien supprimer. L'extension affichait « vidé entièrement » derrière une case de confirmation rouge marquée « définitif ». Elle détecte maintenant la version et rend un échec explicite.                                                               |
+| `9eba593`                       | **Autorisations de site.** `contentSettings.clear()` n'efface que les règles posées par l'extension, jamais celles de l'utilisateur (vérifié dans la source Chromium). La catégorie est requalifiée dans l'aperçu et la grille au lieu de laisser croire à une suppression.                                                                                                                 |
+| `7d63c0c`                       | **Stockage.** Le rapport omettait `countable: false` : l'interface affichait « 0 supprimé(s) » après avoir vidé tout le stockage local. Faussait aussi le total des catégories vidées.                                                                                                                                                                                                      |
+| `29290b4`                       | **Téléchargements.** `downloads.search` plafonne à 1000 résultats sans `limit`. Au-delà, les plus anciens n'étaient ni comptés ni effacés, en silence.                                                                                                                                                                                                                                      |
+| `c7013e0`                       | **Hôtes connus.** `collectKnownHosts` avalait toute erreur de `cookies.getAll` et rendait une liste amputée : les règles à wildcard ne protégeaient plus qu'une partie des sites, sans le dire.                                                                                                                                                                                             |
+| `2d7526b`                       | **Phrase secrète.** Elle vivait dans une variable de module : deux nettoyages concurrents pouvaient se la voler ou l'effacer mutuellement. Elle passe maintenant par la fermeture d'un moteur créé par message. Même commit : purge du coffre expiré au démarrage (la rétention n'était tenue que si l'on relançait un nettoyage), et rejet des messages inconnus au lieu d'un faux succès. |
+| `ca4913f`                       | **Autorisations de site.** `get()` ne rend jamais `'default'` : la condition était toujours vraie et le nettoyage réécrivait le défaut du navigateur en règle d'extension, masquant les changements ultérieurs de l'utilisateur.                                                                                                                                                            |
+| `2106012`                       | **Historique.** L'aperçu comptait sans dédoublonner, le nettoyage dédoublonnait : sur un jeu de 4 entrées paginé par 2, aperçu 7 contre 4 suppressions. Et une entrée sans date valait « époque zéro », ce qui pouvait couper la pagination.                                                                                                                                                |
+| `84d9896`                       | **Motifs unicode.** Chrome rend des hôtes en punycode ; un motif unicode ne correspondait à rien et ne protégeait rien, en silence.                                                                                                                                                                                                                                                         |
+| `4cb56e2`                       | **Rétention.** `get()` acceptait `NaN`, ce qui rendait la comparaison de purge toujours fausse : le coffre n'était jamais purgé.                                                                                                                                                                                                                                                            |
+| `d7af11c`                       | **Coffre.** Le compte d'itérations relu du stockage n'était pas borné : un enregistrement trafiqué imposait un PBKDF2 sans limite.                                                                                                                                                                                                                                                          |
+| `0feba0b`                       | **Journal.** Une valeur `runs` abîmée était étalée sans contrôle — une chaîne produisait quinze entrées bidon, un objet aurait fait jeter _après_ la suppression.                                                                                                                                                                                                                           |
+| `ed42191` + `331111b`           | **Interface.** Les appels au service worker n'étaient pas protégés : une erreur devenait un rejet non capturé, la popup restait figée, le bouton mort. Ajout aussi d'une confirmation en deux temps avant la suppression du coffre, qui agissait au premier clic.                                                                                                                           |
+| `f1dd3ff`                       | **Performance.** La liste des hôtes connus n'était pas mémoïsée : un profil complet avec trois règles à wildcard déclenchait douze `cookies.getAll` et douze `history.search(5000)` concurrents pour le même résultat.                                                                                                                                                                      |
+| `5fa2a0b`                       | Tests fermant les trous révélés par mutation, et trois nettoyages cosmétiques.                                                                                                                                                                                                                                                                                                              |
+| `f7a3f09`                       | Suite deux fois plus rapide : le coffre dérivait quinze clés PBKDF2 réelles.                                                                                                                                                                                                                                                                                                                |
+| `244f4da`, `44063e6`, `79db87f` | Prettier et ESLint configurés puis appliqués, formatage isolé dans un commit à part.                                                                                                                                                                                                                                                                                                        |
+| `bfa44a5`, `9eba593`            | Documentation : trois affirmations fausses corrigées, README découpé, licence MIT, CONTRIBUTING.                                                                                                                                                                                                                                                                                            |
+| `04de8c0`                       | CI, `.gitignore` complété, gabarits d'issue et de PR.                                                                                                                                                                                                                                                                                                                                       |
+| `84c1e39`                       | Couverture mesurable, `npm audit` ramené à zéro.                                                                                                                                                                                                                                                                                                                                            |
+
+### Deux choses à savoir sur l'historique
+
+- **`331111b` « chore: sauvegarde automatique »** n'est pas de moi : un hook du
+  dépôt a committé mon travail en cours sur `options.ts` pendant que je le
+  testais. Le contenu est correct et vérifié, seul le message est générique.
+  Je ne l'ai pas réécrit : tu m'as demandé de ne pas toucher à l'historique.
+- **`7b860d9` puis `9429823`** : j'ai supprimé la clé `allowScripts` de
+  `package.json` en me fiant à une analyse qui la disait inerte. C'était faux —
+  npm 11 lit ce champ, `npm approve-scripts` le gère. Je l'ai rétablie dès que
+  l'installation d'une dépendance l'a montré. La leçon vaut d'être écrite : la
+  preuve « aucun code ne référence ce symbole » ne vaut rien quand le
+  consommateur est un outil externe.
+
+---
+
+## Ce qui n'a pas été fait, et pourquoi
+
+C'est la section qui compte.
+
+### Rien n'a été vérifié dans un vrai navigateur
+
+**Aucun test n'a tourné dans Chrome.** Toute la suite s'exécute sous Node avec
+de faux objets `chrome.*`. Les tests d'interface utilisent happy-dom, qui n'est
+pas un navigateur. Chaque affirmation de ce rapport sur le comportement des API
+Chrome vient de la documentation officielle ou de la source Chromium — jamais
+d'une observation. Les faux ont été rapprochés du comportement réel là où je
+l'ai su, mais un faux reste un faux : c'est précisément ce qui a laissé passer
+les défauts corrigés ici.
+
+`docs/recette-manuelle.md` existe pour ça et n'a pas été jouée.
+
+### Défauts identifiés et volontairement non corrigés
+
+| Défaut                                                                                                                                   | Pourquoi je n'ai pas touché                                                                                                                                                                                                                                                                                                                                              |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Le coffre écrase la sauvegarde précédente** (`vault.ts`). Un second nettoyage détruit le coffre du premier avant toute restauration.   | Trois issues possibles — refuser d'écraser, garder plusieurs coffres, avertir dans la popup — et elles n'ont pas le même coût ni la même surface d'interface. C'est un choix de produit. Documenté dans `docs/coffre.md`.                                                                                                                                                |
+| **Cookies partitionnés (CHIPS)** : jamais comptés, jamais supprimés, jamais sauvegardés.                                                 | Les énumérer demande de découvrir les `partitionKey` existantes, ce que l'API ne propose pas directement. C'est une fonctionnalité, pas un correctif. Documenté.                                                                                                                                                                                                         |
+| **Cache HTTP exclusible par origine** : l'API le permet depuis Chrome 74, contrairement à ce que le code affirmait.                      | Implémenter demanderait une colonne de plus dans la grille, donc une promesse à l'utilisateur. Or le filtre porte sur l'URL de la ressource, pas sur le site visité : « conserver le cache de ce site » ne préserverait pas ce qu'il charge depuis un CDN. Une demi-promesse vaut moins qu'une limite annoncée. Le texte est corrigé, la fonctionnalité reste à décider. |
+| **`history.deleteUrl` ignore la période.** Un profil « dernière heure » efface des visites d'il y a six mois.                            | Aucun contournement n'existe : `deleteRange` borne le temps mais n'accepte ni URL ni exclusion. Seule la documentation pouvait changer, et elle a changé.                                                                                                                                                                                                                |
+| **`cookies.remove` résout avec `null`** au lieu de rejeter quand le cookie est introuvable : cet échec est compté comme une suppression. | Marqué « à vérifier » et non confirmé par une source formelle. Corriger sur une hypothèse ferait basculer des suppressions réussies en échecs. À confirmer dans un vrai navigateur d'abord.                                                                                                                                                                              |
+| **`Cleaner.perSite`, `PER_SITE`, `COLUMNS`/`UNFILTERABLE`** : trois exemplaires du même fait, dont un jamais lu en production.           | Fusionner suppose de choisir laquelle est la source de vérité — décision de conception. Et supprimer `PER_SITE` déplacerait simplement la constante dans le fichier de test tout en affaiblissant deux contrôles. Aucun gain mesurable.                                                                                                                                  |
+| **`KeepRule.keepCookies`** : honoré par le moteur, impossible à saisir dans l'interface, atteignable seulement par import JSON.          | Construire l'interface est une fonctionnalité ; retirer le champ casse les profils importés qui s'en servent. À toi de trancher.                                                                                                                                                                                                                                         |
+| **`relevantRules`** (`siteSettings.ts`) : filtre déjà appliqué par `buildPlan`.                                                          | Deux tests construisent des plans à la main et en dépendent. Le retirer demande de fixer un contrat entre le planificateur et les cleaners.                                                                                                                                                                                                                              |
+| **Le journal n'a aucune interface.** Écrit à chaque nettoyage, lisible seulement depuis la console du service worker.                    | Fonctionnalité manquante, pas défaut. Signalé.                                                                                                                                                                                                                                                                                                                           |
+| **`vite`/`vitest` en montée de majeure** : finalement fait (`84c1e39`), mais après coup et hors du plan initial.                         | Je l'avais écarté en phase 1 comme « hors périmètre ». Introduire happy-dom a ajouté une faille critique, ce qui a rendu la montée nécessaire. Signalé ici parce que le raisonnement de départ était mauvais.                                                                                                                                                            |
+
+### Ce que je n'ai pas su mesurer
+
+- **Le gain réel de la mémoïsation** (`f1dd3ff`). La démonstration est
+  structurelle — douze appels au lieu d'un — mais je n'ai pas mesuré de
+  millisecondes, faute de navigateur.
+- **La sémantique de `endTime`** dans `history.search` n'est documentée nulle
+  part. La pagination est maintenant robuste dans les deux cas, mais je ne sais
+  toujours pas lequel est vrai.
+- **`since` sur les types de stockage** : la documentation ne dit pas si la
+  borne de temps est honorée pour `localStorage`, `indexedDB`, `cacheStorage`
+  et `serviceWorkers`. Le code la passe ; je ne peux pas affirmer qu'elle est
+  prise en compte.
+- **Aucune mesure de performance** n'a été faite, nulle part. Le seul chiffre
+  de ce rapport est le temps de la suite de tests.
+
+---
+
+## Risques restants, par priorité
+
+1. **La catégorie « Autorisations de site » ne fait toujours pas ce que son nom
+   dit.** Elle est maintenant honnête dans l'interface, mais un utilisateur
+   pressé cochera la case en croyant effacer ses autorisations. La retirer reste
+   la seule option pleinement honnête.
+2. **Les cookies partitionnés échappent à tout** — y compris au coffre. Un
+   utilisateur qui active le coffre et nettoie perd ces cookies sans
+   sauvegarde, contrairement à ce que la promesse générale laisse entendre.
+3. **Le coffre est un point unique de destruction.** Deux nettoyages
+   d'affilée et la première sauvegarde est perdue. Le seul garde-fou est une
+   ligne de documentation.
+4. **Le service worker n'est jamais testé tel qu'il tourne.** `background.ts`
+   reste à 0 % : le routage en a été extrait et testé, mais le câblage à
+   `chrome.*`, la restauration des cookies et la sauvegarde ne sont couverts par
+   rien.
+5. **La suppression de l'historique déborde de la période demandée.** Limite
+   d'API, désormais documentée, mais l'utilisateur qui choisit « dernière
+   heure » ne s'attend pas à perdre six mois.
+6. **`<all_urls>` reste une permission très large.** Justifiée, documentée,
+   mais c'est la surface d'attaque la plus grande du manifeste.
+7. **`options.ts` est à 64 % et fait 380 lignes**, avec du rendu, de la
+   validation et du câblage mêlés. C'est le fichier où le prochain bug est le
+   plus probable.
+
+---
+
+## Ce que tu dois vérifier toi-même
+
+1. **Jouer `docs/recette-manuelle.md` en entier**, dans un vrai Chrome, sur un
+   profil de test. C'est le seul moyen de valider tout ce qui précède. Les trois
+   scénarios ajoutés (mots de passe sur Chrome 144+, confirmation du coffre,
+   erreur du service worker) n'ont jamais été exécutés.
+2. **Confirmer le comportement des mots de passe** sur ta version de Chrome
+   (`chrome://version`). Si tu es en dessous de 144, la catégorie fonctionne
+   encore et mon garde-fou ne se déclenche pas.
+3. **Vérifier qu'une autorisation de site accordée à la main survit bien** à un
+   nettoyage. Si elle survit, ma conclusion sur `contentSettings.clear()` est
+   confirmée et la catégorie mérite d'être retirée.
+4. **Tester la restauration du coffre de bout en bout** avec de vrais cookies de
+   session : c'est le chemin le plus critique et le moins observable.
+5. **Relire les trois décisions de produit** listées plus haut : coffre écrasé,
+   CHIPS, cache HTTP filtrable.
+6. **Décider du sort de `docs/superpowers/`** (3728 lignes d'archives) et de
+   `AUDIT.md` lui-même, qui n'a pas vocation à vivre éternellement à la racine.
+7. **Vérifier la CI au premier push** : elle n'a jamais tourné sur GitHub. Le
+   job « icons » installe Pillow et compare le résultat aux fichiers versionnés,
+   ce qui est vrai localement mais dépend de la version de Pillow de l'exécuteur.
