@@ -62,7 +62,9 @@ export function createStorageCleaner(
 
       try {
         await api.browsingData.remove(options, { [category]: true });
-        return { status: 'ok', deleted: 0, kept: 0 };
+        // `countable: false` : l'API ne rend aucun décompte. Sans ce drapeau,
+        // l'interface afficherait « 0 supprimé » après avoir tout vidé.
+        return { status: 'ok', deleted: 0, kept: 0, countable: false };
       } catch (cause) {
         return {
           status: 'failed',

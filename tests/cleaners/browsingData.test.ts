@@ -59,6 +59,15 @@ describe('createStorageCleaner', () => {
     expect(preview.note).toMatch(/minorant|non exhaustive/i);
   });
 
+  it('marque le rapport comme non chiffrable : la catégorie est vidée en bloc', async () => {
+    const { api } = fakeApi();
+    const report = await createStorageCleaner(api, 'localStorage', knownHosts).clean(
+      plan('localStorage', []),
+    );
+    // Sans ce drapeau, l'interface affiche « 0 supprimé(s) » après avoir tout vidé.
+    expect(report.countable).toBe(false);
+  });
+
   it('rend un statut échoué quand l\'API rejette', async () => {
     const api = {
       browsingData: {
