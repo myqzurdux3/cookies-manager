@@ -16,7 +16,8 @@ jamais enregistrée ; le coffre vit dans `chrome.storage.local`.
 - Une phrase secrète oubliée rend le coffre définitivement illisible.
 - **Un nouveau nettoyage remplace le coffre précédent.** Il n'y a qu'un seul
   enregistrement : si vous nettoyez deux fois sans restaurer entre les deux, la
-  première sauvegarde est perdue.
+  première sauvegarde est perdue. La popup l'annonce avant le nettoyage, avec la
+  date et le nombre de cookies du coffre existant.
 - Si l'écriture du coffre échoue, les cookies ne sont pas supprimés : jamais de
   suppression sans la sauvegarde promise.
 - Seuls les cookies sont sauvegardés — les autres catégories ne sont pas

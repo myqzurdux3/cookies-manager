@@ -179,6 +179,13 @@ ul {
   line-height: 1.5;
 }
 
+/* Avertissement dans un encart neutre : le rouge reste réservé à l'irréversible,
+   mais un remplacement de coffre doit se voir. */
+.hint.warn {
+  color: var(--danger);
+  font-weight: 500;
+}
+
 .callout.danger {
   border-color: var(--danger);
   background: var(--danger-soft);

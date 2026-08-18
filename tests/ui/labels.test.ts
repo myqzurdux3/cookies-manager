@@ -3,6 +3,7 @@ import {
   CATEGORY_LABELS,
   formatRestoreReport,
   formatRunSummary,
+  formatVaultReplacement,
   formatVaultState,
   needsExtraConfirmation,
   previewRow,
@@ -225,5 +226,36 @@ describe('needsExtraConfirmation', () => {
 
   it("n'exige rien pour les catégories ordinaires", () => {
     expect(needsExtraConfirmation(['cookies', 'httpCache'])).toBe(false);
+  });
+
+  describe('formatVaultReplacement', () => {
+    const date = (at: number) => new Date(at).toISOString().slice(0, 10);
+
+    it("n'annonce rien quand aucun coffre n'existe", () => {
+      expect(formatVaultReplacement(null, date)).toBeNull();
+    });
+
+    it('annonce le remplacement du coffre existant, avec sa date et son contenu', () => {
+      const message = formatVaultReplacement(
+        {
+          version: 1,
+          createdAt: 1_700_000_000_000,
+          cookieCount: 12,
+          domains: ['a.test', 'b.test'],
+        },
+        date,
+      );
+      expect(message).toContain('2023-11-14');
+      expect(message).toContain('12');
+      expect(message).toMatch(/remplac/i);
+    });
+
+    it('accorde le singulier', () => {
+      const message = formatVaultReplacement(
+        { version: 1, createdAt: 0, cookieCount: 1, domains: ['a.test'] },
+        date,
+      );
+      expect(message).toContain('(1 cookie)');
+    });
   });
 });

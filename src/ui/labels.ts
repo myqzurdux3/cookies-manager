@@ -127,6 +127,26 @@ export function formatRestoreReport(report: RestoreReport): string {
 }
 
 /**
+ * Avertit qu'un coffre existant va être écrasé.
+ *
+ * Il n'y a qu'un seul emplacement de stockage : un nouveau nettoyage détruit la
+ * sauvegarde précédente. Sans cet avertissement, la seule façon de s'en rendre
+ * compte est d'avoir besoin de restaurer et de constater que c'est trop tard.
+ * Aucune valeur de cookie ne transite par cette fonction.
+ */
+export function formatVaultReplacement(
+  summary: VaultSummary | null,
+  formatDate: (at: number) => string,
+): string | null {
+  if (summary === null) return null;
+  const cookies = summary.cookieCount > 1 ? 'cookies' : 'cookie';
+  return (
+    `Un coffre du ${formatDate(summary.createdAt)} existe déjà ` +
+    `(${summary.cookieCount} ${cookies}) et sera remplacé : restaurez-le d'abord si vous en avez besoin.`
+  );
+}
+
+/**
  * Résume le coffre sans jamais toucher à son contenu : nombre de cookies,
  * domaines et date. Aucune valeur de cookie ne transite par cette fonction.
  */

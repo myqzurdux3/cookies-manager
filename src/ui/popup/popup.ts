@@ -2,9 +2,11 @@ import type { CategoryResult, PreviewResult } from '../../core/engine';
 import { send } from '../../core/messages';
 import type { Settings } from '../../core/settings';
 import type { Category, Profile } from '../../core/types';
+import type { VaultSummary } from '../../core/vault';
 import type { Row } from '../labels';
 import {
   formatRunSummary,
+  formatVaultReplacement,
   needsExtraConfirmation,
   previewRow,
   profileMeta,
@@ -31,6 +33,7 @@ const confirmBtn = document.querySelector<HTMLButtonElement>('#confirm')!;
 const cancelBtn = document.querySelector<HTMLButtonElement>('#cancel')!;
 const vaultEl = document.querySelector<HTMLLabelElement>('#vault')!;
 const passphraseInput = document.querySelector<HTMLInputElement>('#passphrase')!;
+const vaultExistingEl = document.querySelector<HTMLElement>('#vault-existing')!;
 const summaryEl = document.querySelector<HTMLParagraphElement>('#report-summary')!;
 const sparedEl = document.querySelector<HTMLElement>('#spared')!;
 const sparedList = document.querySelector<HTMLUListElement>('#spared-list')!;
@@ -115,8 +118,34 @@ async function showPreview(profile: Profile): Promise<void> {
   confirmBtn.disabled = risky;
   vaultEl.hidden = !(settings.vaultEnabled && profile.categories.includes('cookies'));
   passphraseInput.value = '';
+  await annoncerRemplacementDuCoffre();
   chooserEl.hidden = true;
   previewEl.hidden = false;
+}
+
+/**
+ * Le coffre n'a qu'un seul emplacement : nettoyer une seconde fois détruit la
+ * sauvegarde précédente. Sans cet avertissement, on ne s'en aperçoit qu'au
+ * moment d'en avoir besoin — c'est-à-dire trop tard.
+ *
+ * Un échec ici ne doit pas empêcher le nettoyage : on se tait plutôt que de
+ * bloquer sur une information secondaire.
+ */
+async function annoncerRemplacementDuCoffre(): Promise<void> {
+  vaultExistingEl.hidden = true;
+  if (vaultEl.hidden) return;
+
+  try {
+    const summary = (await send({ type: 'VAULT_DESCRIBE' })) as VaultSummary | null;
+    const message = formatVaultReplacement(summary, (at) =>
+      new Date(at).toLocaleDateString('fr-FR'),
+    );
+    if (message === null) return;
+    vaultExistingEl.textContent = message;
+    vaultExistingEl.hidden = false;
+  } catch {
+    // Sans réponse, on n'affirme rien.
+  }
 }
 
 function backToChooser(): void {

@@ -197,4 +197,44 @@ describe('popup', () => {
     check.dispatchEvent(new Event('change'));
     expect(confirm.disabled).toBe(false);
   });
+
+  it('avertit qu’un coffre existant sera remplacé', async () => {
+    const chrome = await mountPopup((type) => {
+      if (type === 'GET_SETTINGS') return ok({ vaultEnabled: true, vaultRetentionDays: 7 });
+      if (type === 'VAULT_DESCRIBE')
+        return ok({
+          version: 1,
+          createdAt: 1_700_000_000_000,
+          cookieCount: 12,
+          domains: ['a.test'],
+        });
+      return HAPPY(type);
+    });
+
+    clickProfile();
+    await settle();
+
+    expect(chrome.sent.some((m) => m.type === 'VAULT_DESCRIBE')).toBe(true);
+    const avertissement = document.querySelector<HTMLElement>('#vault-existing')!;
+    expect(avertissement.hidden).toBe(false);
+    expect(avertissement.textContent).toMatch(/remplac/i);
+    expect(avertissement.textContent).toContain('12');
+  });
+
+  it('n’avertit pas quand aucun coffre n’existe encore', async () => {
+    await mountPopup((type) =>
+      type === 'GET_SETTINGS' ? ok({ vaultEnabled: true, vaultRetentionDays: 7 }) : HAPPY(type),
+    );
+
+    clickProfile();
+    await settle();
+    expect(document.querySelector<HTMLElement>('#vault-existing')!.hidden).toBe(true);
+  });
+
+  it('n’interroge pas le coffre quand il est désactivé', async () => {
+    const chrome = await mountPopup(HAPPY);
+    clickProfile();
+    await settle();
+    expect(chrome.sent.some((m) => m.type === 'VAULT_DESCRIBE')).toBe(false);
+  });
 });
