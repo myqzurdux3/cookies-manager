@@ -175,10 +175,12 @@ async function chargerExtension(chemin) {
   const version = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json();
   const navigateur = await cdp(version.webSocketDebuggerUrl);
   try {
-    await navigateur.send('Extensions.loadUnpacked', { path: chemin });
-    return true;
+    // La commande rend l'identifiant qu'elle a attribué : c'est lui qui fait
+    // foi, pas celui qu'on aurait calculé depuis le chemin.
+    const { id } = await navigateur.send('Extensions.loadUnpacked', { path: chemin });
+    return typeof id === 'string' && id.length > 0 ? id : null;
   } catch {
-    return false;
+    return null;
   } finally {
     navigateur.close();
   }
@@ -293,19 +295,14 @@ try {
   // accès aux API qu'un service worker, et elle ne se suspend pas : s'attacher
   // à un worker le laisse parfois figé, et son contexte n'expose alors rien.
   const chemin = DIST.replace(/\/$/, '');
-  const extensionId = extensionIdDepuis(chemin);
+  let extensionId = extensionIdDepuis(chemin);
 
-  // `--load-extension` peut être ignoré sans le dire : on vérifie, et on
-  // retombe sur le chargement par le protocole DevTools.
+  // `--load-extension` peut être ignoré sans le dire — Chrome 137 l'a désactivé.
+  // On retombe alors sur le protocole DevTools, dont l'identifiant fait foi.
   if (!(await extensionVisible(extensionId))) {
-    const charge = await chargerExtension(chemin);
-    for (let i = 0; i < 20 && !(await extensionVisible(extensionId)); i += 1) await sleep(400);
-    if (!(await extensionVisible(extensionId))) {
-      throw new Error(
-        `l'extension ne s'est pas chargée (Extensions.loadUnpacked ${charge ? 'accepté' : 'refusé'}). ` +
-          `Chrome 137 et suivants refusent --load-extension. Sortie du navigateur : ${dernieresLignes()}`,
-      );
-    }
+    const attribue = await chargerExtension(chemin);
+    if (attribue !== null) extensionId = attribue;
+    await sleep(800);
   }
   console.log(`Navigateur : ${browser}\nExtension  : ${extensionId}\n`);
 

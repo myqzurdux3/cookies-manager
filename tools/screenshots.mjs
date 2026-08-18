@@ -145,10 +145,12 @@ async function chargerExtension(chemin) {
   const version = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json();
   const navigateur = await cdp(version.webSocketDebuggerUrl);
   try {
-    await navigateur.send('Extensions.loadUnpacked', { path: chemin });
-    return true;
+    // La commande rend l'identifiant qu'elle a attribué : c'est lui qui fait
+    // foi, pas celui qu'on aurait calculé depuis le chemin.
+    const { id } = await navigateur.send('Extensions.loadUnpacked', { path: chemin });
+    return typeof id === 'string' && id.length > 0 ? id : null;
   } catch {
-    return false;
+    return null;
   } finally {
     navigateur.close();
   }
@@ -271,10 +273,11 @@ try {
   // Travailler depuis une page de l'extension plutôt que depuis son service
   // worker : même accès aux API, et pas de suspension possible.
   const chemin = DIST.replace(/\/$/, '');
-  const extensionId = extensionIdDepuis(chemin);
+  let extensionId = extensionIdDepuis(chemin);
   if (!(await extensionVisible(extensionId))) {
-    await chargerExtension(chemin);
-    for (let i = 0; i < 20 && !(await extensionVisible(extensionId)); i += 1) await sleep(400);
+    const attribue = await chargerExtension(chemin);
+    if (attribue !== null) extensionId = attribue;
+    await sleep(800);
   }
   await fetch(`http://127.0.0.1:${PORT}/json/new?chrome-extension://${extensionId}/options.html`, {
     method: 'PUT',
