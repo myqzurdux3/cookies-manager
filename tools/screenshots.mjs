@@ -297,7 +297,9 @@ async function capture(client, nom, { width, hauteurMax }) {
     });
     const fichier = join(OUT, `${nom}-${theme === 'light' ? 'clair' : 'sombre'}.png`);
     await writeFile(fichier, Buffer.from(data, 'base64'));
-    console.log(`  écrit ${fichier.split('/').slice(-2).join('/')}`);
+    console.log(
+      `  écrit ${fichier.split('/').slice(-2).join('/')} (${Math.min(mesure.largeur, width)}×${Math.min(mesure.hauteur, hauteurMax)} CSS)`,
+    );
   }
 }
 
@@ -388,7 +390,7 @@ try {
      return true;`,
   );
   await sleep(500);
-  await capture(optionsClient, 'options', { width: 1000, hauteurMax: 860 });
+  await capture(optionsClient, 'options', { width: 1000, hauteurMax: 3000 });
   optionsClient.close();
 
   swClient.close();
