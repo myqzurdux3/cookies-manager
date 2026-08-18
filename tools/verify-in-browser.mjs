@@ -225,13 +225,14 @@ async function attendreNavigateur(timeoutMs = 30000) {
 let code = 0;
 try {
   await attendreNavigateur();
-  const sw = await waitFor((t) => t.type === 'service_worker');
-  const extensionId = new URL(sw.url).host;
-  console.log(`Navigateur : ${browser}\nExtension  : ${extensionId}\n`);
 
-  const swClient = await cdp(sw.webSocketDebuggerUrl);
-  await swClient.send('Runtime.enable');
-  await attendrePret(swClient);
+  // On identifie l'extension par n'importe laquelle de ses cibles, puis on
+  // travaille uniquement depuis une de ses pages. Une page a le même accès aux
+  // API qu'un service worker, et elle ne se suspend pas : s'attacher à un
+  // worker le laisse parfois figé, et son contexte n'expose alors rien.
+  const cible = await waitFor((t) => t.url.startsWith('chrome-extension://'));
+  const extensionId = new URL(cible.url).host;
+  console.log(`Navigateur : ${browser}\nExtension  : ${extensionId}\n`);
 
   await fetch(`http://127.0.0.1:${PORT}/json/new?chrome-extension://${extensionId}/options.html`, {
     method: 'PUT',
@@ -243,6 +244,8 @@ try {
   );
   const pageClient = await cdp(optionsPage.webSocketDebuggerUrl);
   await pageClient.send('Runtime.enable');
+  await attendrePret(pageClient);
+  const swClient = pageClient;
 
   const send = (message) =>
     evaluate(pageClient, `return chrome.runtime.sendMessage(${JSON.stringify(message)});`);
@@ -361,7 +364,6 @@ try {
   const inconnu = await send({ type: 'MESSAGE_QUI_N_EXISTE_PAS' });
   check('un message inconnu est rejeté', inconnu.ok === false, inconnu.error);
 
-  swClient.close();
   pageClient.close();
 } catch (cause) {
   check('déroulement du script', false, cause instanceof Error ? cause.message : String(cause));

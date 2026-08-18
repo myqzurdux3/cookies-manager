@@ -217,9 +217,19 @@ try {
     if (!(await portLibre())) break;
     await sleep(400);
   }
-  const sw = await waitFor((t) => t.type === 'service_worker');
-  const extensionId = new URL(sw.url).host;
-  const swClient = await cdp(sw.webSocketDebuggerUrl);
+  // Travailler depuis une page de l'extension plutôt que depuis son service
+  // worker : même accès aux API, et pas de suspension possible.
+  const cible = await waitFor((t) => t.url.startsWith('chrome-extension://'));
+  const extensionId = new URL(cible.url).host;
+  await fetch(`http://127.0.0.1:${PORT}/json/new?chrome-extension://${extensionId}/options.html`, {
+    method: 'PUT',
+  });
+  const amorce = await waitFor(
+    (t) => t.type === 'page' && t.url.endsWith('options.html'),
+    extensionId,
+    'options.html',
+  );
+  const swClient = await cdp(amorce.webSocketDebuggerUrl);
   await swClient.send('Runtime.enable');
   await attendrePret(swClient);
 
