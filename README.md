@@ -1,7 +1,7 @@
 <h1 align="center">Cookies Manager</h1>
 
 <p align="center">
-  Extension Chrome et Brave qui supprime les données de navigation<br>
+  Extension Chrome qui supprime les données de navigation<br>
   <strong>en conservant celles des sites que vous listez</strong>.
 </p>
 

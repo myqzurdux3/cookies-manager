@@ -10,7 +10,7 @@ Audit démarré le 2026-08-18 sur `main` @ `8a3cc39`.
 
 | Élément             | Détail                                                                             |
 | ------------------- | ---------------------------------------------------------------------------------- |
-| Type                | Extension Chrome / Brave, Manifest V3                                              |
+| Type                | Extension Chrome, Manifest V3                                                      |
 | Langage             | TypeScript 5.9 (`strict`, `noUncheckedIndexedAccess`), ES2022, modules ESM         |
 | Build               | Vite 5.4 → `dist/` (3 entrées : `popup.html`, `options.html`, `src/background.ts`) |
 | Tests               | Vitest 2.1.9, environnement `node`, `tests/**/*.test.ts`                           |
