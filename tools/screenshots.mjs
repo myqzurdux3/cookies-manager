@@ -91,17 +91,27 @@ async function waitFor(pred, extensionId, page = 'popup.html') {
  * de l'extension y soient liées : `chrome.cookies` est alors `undefined`. On
  * attend qu'il réponde vraiment avant de lui demander quoi que ce soit.
  */
-async function attendrePret(client, timeoutMs = 20000) {
+async function attendrePret(client, timeoutMs = 30000) {
+  // S'attacher à un worker le laisse parfois suspendu en attente du débogueur :
+  // il n'exécute alors rien, et ses API ne sont jamais liées.
+  await client.send('Runtime.runIfWaitingForDebugger').catch(() => {});
+
   const limite = Date.now() + timeoutMs;
+  let derniereErreur = 'aucune';
   while (Date.now() < limite) {
-    const pret = await evaluate(
-      client,
-      `return typeof chrome?.cookies?.set === 'function' && typeof chrome?.storage?.local?.set === 'function';`,
-    ).catch(() => false);
-    if (pret === true) return;
+    try {
+      const pret = await evaluate(
+        client,
+        `return typeof chrome?.cookies?.set === 'function' && typeof chrome?.storage?.local?.set === 'function';`,
+      );
+      if (pret === true) return;
+      derniereErreur = `API absentes (chrome ${typeof pret})`;
+    } catch (cause) {
+      derniereErreur = cause instanceof Error ? cause.message : String(cause);
+    }
     await sleep(300);
   }
-  throw new Error("les API de l'extension ne sont pas devenues disponibles");
+  throw new Error(`les API de l'extension ne sont pas devenues disponibles : ${derniereErreur}`);
 }
 
 async function evaluate(client, expression) {
