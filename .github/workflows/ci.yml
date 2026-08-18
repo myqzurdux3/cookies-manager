@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 20 et 22 sont les LTS actives, 24 la version courante. L'extension ne
+        # tourne pas sous Node — seule la chaîne de build en dépend.
+        node: ['20', '22', '24']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      - name: Vérifier que le build produit bien une extension chargeable
+        run: |
+          test -f dist/manifest.json
+          test -f dist/background.js
+          test -f dist/popup.html
+          test -f dist/options.html
+          test -f dist/icons/icon-128.png
+
+  icons:
+    # Le logo est généré : si le script et les fichiers versionnés divergent,
+    # la prochaine régénération écrase silencieusement le dessin publié.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pillow
+      - run: python3 tools/make-icons.py
+      - name: Les icônes versionnées correspondent au script
+        run: git diff --exit-code -- public/icons

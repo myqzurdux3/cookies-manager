@@ -1,2 +1,23 @@
 node_modules/
 dist/
+
+# Secrets et configuration locale
+.env
+.env.*
+*.pem
+*.key
+
+# Caches d'outils
+.vitest/
+coverage/
+.eslintcache
+*.tsbuildinfo
+*.log
+npm-debug.log*
+
+# Éditeurs et systèmes de fichiers
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
