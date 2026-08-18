@@ -22,6 +22,10 @@ let profiles: Profile[] = [];
 let current: Profile | null = null;
 let hideStatus: ReturnType<typeof setTimeout> | undefined;
 
+function reason(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
+}
+
 function say(message: string, error = false): void {
   statusEl.textContent = message;
   statusEl.classList.toggle('error', error);
@@ -156,9 +160,23 @@ function renderProfile(profile: Profile): void {
   renderKeeplist();
 }
 
+function optionFor(profile: Profile): HTMLOptionElement {
+  // `new Option(...)` n'existe que dans un navigateur : createElement rend la
+  // page pilotable en test, pour un résultat identique.
+  const option = document.createElement('option');
+  option.value = profile.id;
+  option.textContent = profile.name;
+  return option;
+}
+
 async function reload(selectId?: string): Promise<void> {
-  profiles = (await send({ type: 'LIST_PROFILES' })) as Profile[];
-  select.replaceChildren(...profiles.map((profile) => new Option(profile.name, profile.id)));
+  try {
+    profiles = (await send({ type: 'LIST_PROFILES' })) as Profile[];
+  } catch (cause) {
+    say(`Profils illisibles : ${reason(cause)}`, true);
+    return;
+  }
+  select.replaceChildren(...profiles.map(optionFor));
   const target = profiles.find((p) => p.id === selectId) ?? profiles[0];
   if (target === undefined) return;
   select.value = target.id;
@@ -182,7 +200,12 @@ document.querySelector('#new-profile')!.addEventListener('click', () => {
 
 document.querySelector('#delete-profile')!.addEventListener('click', async () => {
   if (current === null) return;
-  await send({ type: 'DELETE_PROFILE', id: current.id });
+  try {
+    await send({ type: 'DELETE_PROFILE', id: current.id });
+  } catch (cause) {
+    say(`Suppression refusée : ${reason(cause)}`, true);
+    return;
+  }
   say('Profil supprimé.');
   await reload();
 });
@@ -226,7 +249,12 @@ document.querySelector<HTMLFormElement>('#editor')!.addEventListener('submit', a
 });
 
 document.querySelector('#export')!.addEventListener('click', async () => {
-  importArea.value = (await send({ type: 'EXPORT' })) as string;
+  try {
+    importArea.value = (await send({ type: 'EXPORT' })) as string;
+  } catch (cause) {
+    say(`Export refusé : ${reason(cause)}`, true);
+    return;
+  }
   say('Profils exportés dans la zone de texte.');
 });
 
@@ -253,10 +281,14 @@ async function refreshVaultState(): Promise<void> {
 }
 
 async function loadSettings(): Promise<void> {
-  const settings = (await send({ type: 'GET_SETTINGS' })) as Settings;
-  vaultEnabled.checked = settings.vaultEnabled;
-  vaultRetention.value = String(settings.vaultRetentionDays);
-  await refreshVaultState();
+  try {
+    const settings = (await send({ type: 'GET_SETTINGS' })) as Settings;
+    vaultEnabled.checked = settings.vaultEnabled;
+    vaultRetention.value = String(settings.vaultRetentionDays);
+    await refreshVaultState();
+  } catch (cause) {
+    say(`Réglages illisibles : ${reason(cause)}`, true);
+  }
 }
 
 document.querySelector('#save-settings')!.addEventListener('click', async () => {
@@ -292,8 +324,38 @@ document.querySelector('#vault-restore')!.addEventListener('click', async () => 
   }
 });
 
-document.querySelector('#vault-clear')!.addEventListener('click', async () => {
-  await send({ type: 'VAULT_CLEAR' });
+const vaultClear = document.querySelector<HTMLButtonElement>('#vault-clear')!;
+const VAULT_CLEAR_LABEL = vaultClear.textContent ?? 'Supprimer le coffre';
+
+/**
+ * Supprimer le coffre est irréversible et ne demandait qu'un clic. Confirmation
+ * en deux temps sur le bouton lui-même, plutôt qu'une modale : le service
+ * worker ne peut pas répondre pendant qu'une modale bloque la page.
+ */
+let vaultClearArmed = false;
+
+function disarmVaultClear(): void {
+  vaultClearArmed = false;
+  vaultClear.textContent = VAULT_CLEAR_LABEL;
+  vaultClear.classList.remove('danger');
+}
+
+vaultClear.addEventListener('click', async () => {
+  if (!vaultClearArmed) {
+    vaultClearArmed = true;
+    vaultClear.textContent = 'Confirmer la suppression';
+    vaultClear.classList.add('danger');
+    say('Suppression définitive du coffre : cliquez à nouveau pour confirmer.', true);
+    return;
+  }
+
+  disarmVaultClear();
+  try {
+    await send({ type: 'VAULT_CLEAR' });
+  } catch (cause) {
+    say(`Suppression du coffre refusée : ${reason(cause)}`, true);
+    return;
+  }
   say('Coffre supprimé.');
   await refreshVaultState();
 });
