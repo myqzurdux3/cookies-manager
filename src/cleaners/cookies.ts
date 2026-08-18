@@ -12,6 +12,19 @@ export type CookiesApi = {
 const TIME_NOTE =
   "Le filtre de période ne s'applique pas aux cookies : l'API ne fournit pas leur date de création.";
 
+/**
+ * `chrome.cookies.getAll({})` ne rend pas les cookies partitionnés (CHIPS) :
+ * il faut fournir la clé de cloison, que rien n'énumère. Mesuré dans
+ * Chromium 150 — un nettoyage sans aucune keep-list les laisse intacts.
+ *
+ * Ils sont donc invisibles ici : ni comptés, ni supprimés, ni sauvegardés dans
+ * le coffre. Le taire ferait annoncer une suppression totale qui n'en est pas
+ * une.
+ */
+const PARTITIONED_NOTE =
+  'Les cookies cloisonnés par site (CHIPS) ne sont pas traités : posés par un service tiers ' +
+  "intégré dans une page, ils restent hors de portée de l'API et survivent au nettoyage.";
+
 export function cookieUrl(cookie: { domain: string; path: string; secure: boolean }): string {
   const scheme = cookie.secure ? 'https' : 'http';
   return `${scheme}://${normalizeHost(cookie.domain)}${cookie.path}`;
@@ -42,9 +55,8 @@ export function createCookiesCleaner(api: CookiesApi): Cleaner {
     async preview(plan: CategoryPlan): Promise<Preview> {
       const cookies = await api.cookies.getAll({});
       const items = cookies.filter((cookie) => isDeletable(cookie, plan)).length;
-      return plan.since === 0
-        ? { countable: true, items }
-        : { countable: true, items, note: TIME_NOTE };
+      const note = plan.since === 0 ? PARTITIONED_NOTE : `${TIME_NOTE} ${PARTITIONED_NOTE}`;
+      return { countable: true, items, note };
     },
 
     async clean(plan: CategoryPlan): Promise<CleanReport> {

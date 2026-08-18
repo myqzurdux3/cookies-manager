@@ -60,11 +60,31 @@ Il n'existe aucune façon de contourner cela : `history.deleteRange` borne le
 temps mais n'accepte ni URL ni exclusion, et `browsingData.remove` avec
 `{history: true}` refuse le filtrage par origine.
 
-## Cookies partitionnés : hors de portée
+## Cookies cloisonnés (CHIPS) : hors de portée
 
-`cookies.getAll({})` ne rend **pas** les cookies partitionnés (CHIPS) : il faut
-fournir une `partitionKey`. Ces cookies ne sont donc ni comptés dans l'aperçu,
-ni supprimés, ni sauvegardés dans le coffre.
+Un service tiers intégré dans une page — un widget de discussion, un lecteur
+vidéo — peut poser un cookie **cloisonné par site visité**. Le même widget sur
+deux sites différents obtient deux cookies séparés, ce qui l'empêche de vous
+suivre de l'un à l'autre.
+
+`cookies.getAll({})` ne rend **pas** ces cookies : il faut fournir la clé de
+cloison, et aucune API ne les énumère. Ils sont donc invisibles pour
+l'extension : ni comptés dans l'aperçu, ni supprimés, ni sauvegardés dans le
+coffre.
+
+Mesuré dans Chromium 150, avec un cookie normal et un cookie cloisonné posés sur
+le même domaine :
+
+```
+getAll({})                            → ["normal@discord.test"]
+getAll({partitionKey: google.test})   → ["partitionne@discord.test"]
+
+nettoyage total, aucune keep-list     → deleted: 1, kept: 0
+après                                  → visibles [] · dans la cloison ["partitionne"]
+```
+
+**Un nettoyage total laisse donc ces cookies derrière lui.** Cela ne dépend
+d'aucun réglage de keep-list. L'aperçu de la catégorie « Cookies » l'annonce.
 
 ## Cookies : pas de filtre de période
 

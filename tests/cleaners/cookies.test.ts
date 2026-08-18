@@ -28,8 +28,8 @@ const COOKIES: FakeCookie[] = [
   { name: 'sid', domain: 'example.com', path: '/', secure: true },
 ];
 
-function plan(keepRules: CategoryPlan['keepRules']): CategoryPlan {
-  return { category: 'cookies', since: 0, keepRules };
+function plan(keepRules: CategoryPlan['keepRules'], since = 0): CategoryPlan {
+  return { category: 'cookies', since, keepRules };
 }
 
 describe('cookieUrl', () => {
@@ -103,5 +103,18 @@ describe('createCookiesCleaner', () => {
     expect(report.status).toBe('partial');
     expect(report.deleted).toBe(0);
     expect(report.error).toMatch(/accès refusé/);
+  });
+
+  it("annonce dans l'aperçu que les cookies cloisonnés échappent au nettoyage", async () => {
+    const preview = await createCookiesCleaner(fakeApi(COOKIES).api).preview(plan([]));
+    // Mesuré dans Chromium 150 : getAll({}) ne rend pas les cookies partitionnés,
+    // et un nettoyage total les laisse intacts. Le taire serait mentir.
+    expect(preview.note).toMatch(/cloisonn/i);
+  });
+
+  it("le dit aussi quand une période est demandée, sans perdre l'autre note", async () => {
+    const preview = await createCookiesCleaner(fakeApi(COOKIES).api).preview(plan([], 1234));
+    expect(preview.note).toMatch(/cloisonn/i);
+    expect(preview.note).toMatch(/période/i);
   });
 });
