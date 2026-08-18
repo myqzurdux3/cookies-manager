@@ -249,4 +249,20 @@ describe('popup', () => {
     expect(document.querySelector<HTMLElement>('#chooser')!.hidden).toBe(true);
     expect(document.querySelector<HTMLButtonElement>('#confirm')!.disabled).toBe(true);
   });
+
+  it('reste muet sur le coffre si le service worker ne répond pas', async () => {
+    await mountPopup((type) => {
+      if (type === 'GET_SETTINGS') return ok({ vaultEnabled: true, vaultRetentionDays: 7 });
+      if (type === 'VAULT_DESCRIBE') return { ok: false, error: 'coffre injoignable' };
+      return HAPPY(type);
+    });
+
+    clickProfile();
+    await settle();
+
+    // Sans réponse on n'affirme rien, et surtout on ne bloque pas le nettoyage.
+    expect(document.querySelector<HTMLElement>('#vault-existing')!.hidden).toBe(true);
+    expect(document.querySelector<HTMLElement>('#preview')!.hidden).toBe(false);
+    expect(document.querySelector<HTMLButtonElement>('#confirm')!.disabled).toBe(false);
+  });
 });

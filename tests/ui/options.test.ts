@@ -349,4 +349,26 @@ describe('page d’options', () => {
     await settle();
     expect(text('#status')).toMatch(/exemple\.test ajouté/i);
   });
+
+  it('marque une colonne conservée en partie comme indéterminée', async () => {
+    // Seuls deux des quatre stockages sont conservés : ni tout, ni rien.
+    await mountOptions((type) =>
+      type === 'LIST_PROFILES'
+        ? ok([
+            {
+              ...PROFILE,
+              keepRules: [{ pattern: 'github.com', keep: { localStorage: true, indexedDB: true } }],
+            },
+          ])
+        : HAPPY(type),
+    );
+
+    const ligne = Array.from(document.querySelectorAll<HTMLTableRowElement>('#keeplist tr')).find(
+      (tr) => tr.textContent?.startsWith('github.com'),
+    )!;
+    const stockage = Array.from(ligne.querySelectorAll<HTMLInputElement>('input'))[1]!;
+    expect(stockage.indeterminate).toBe(true);
+    expect(stockage.checked).toBe(false);
+    expect(stockage.title).toMatch(/conservé en partie/i);
+  });
 });

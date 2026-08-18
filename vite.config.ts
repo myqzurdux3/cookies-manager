@@ -30,7 +30,7 @@ export default defineConfig({
       // régression, pas à imposer un chiffre. `background.ts` reste hors
       // couverture unitaire — c'est du câblage `chrome.*`, exercé par
       // `npm run verify:browser`.
-      thresholds: { lines: 93, statements: 93, branches: 92, functions: 98 },
+      thresholds: { lines: 94, statements: 94, branches: 93, functions: 98 },
     },
   },
 });
