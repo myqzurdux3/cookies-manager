@@ -338,7 +338,11 @@ signalées nommément plus bas.
 
 C'est la section qui compte.
 
-### Rien n'a été vérifié dans un vrai navigateur
+### Rien n'a été vérifié dans un vrai navigateur — **dépassé, voir la phase 7**
+
+> Ce paragraphe décrivait l'état de l'audit avant la phase 7. La majorité de
+> ces conclusions ont depuis été observées dans Chromium 150. Il est conservé
+> tel quel pour que la progression reste lisible.
 
 **Aucun test n'a tourné dans Chrome.** Toute la suite s'exécute sous Node avec
 de faux objets `chrome.*`. Les tests d'interface utilisent happy-dom, qui n'est
@@ -411,27 +415,31 @@ les défauts corrigés ici.
 
 ## Ce que tu dois vérifier toi-même
 
-1. **Jouer `docs/recette-manuelle.md` en entier**, dans un vrai Chrome, sur un
-   profil de test. C'est le seul moyen de valider tout ce qui précède. Les trois
-   scénarios ajoutés (mots de passe sur Chrome 144+, confirmation du coffre,
-   erreur du service worker) n'ont jamais été exécutés.
-2. **Confirmer le comportement des mots de passe** sur ta version de Chrome
-   (`chrome://version`). Si tu es en dessous de 144, la catégorie fonctionne
-   encore et mon garde-fou ne se déclenche pas.
-3. **Vérifier qu'une autorisation de site accordée à la main survit bien** à un
-   nettoyage. Si elle survit, ma conclusion sur `contentSettings.clear()` est
-   confirmée et la catégorie mérite d'être retirée.
-4. **Tester la restauration du coffre de bout en bout** avec de vrais cookies de
-   session : c'est le chemin le plus critique et le moins observable.
-5. **Relire les trois décisions de produit** listées plus haut : coffre écrasé,
-   CHIPS, cache HTTP filtrable.
-6. **Décider du sort de `docs/superpowers/`** (3728 lignes d'archives) et de
-   `AUDIT.md` lui-même, qui n'a pas vocation à vivre éternellement à la racine.
-7. **Vérifier la CI au premier push** : elle n'a jamais tourné sur GitHub. Le
-   job « icons » installe Pillow et compare le résultat aux fichiers versionnés,
-   ce qui est vrai localement mais dépend de la version de Pillow de l'exécuteur.
+Révisé après la phase 7 : ce qui a pu être vérifié par machine l'a été.
 
----
+1. **Jouer `docs/recette-manuelle.md` dans un navigateur visible.** Le script
+   `npm run verify:browser` couvre la logique, jamais l'interface : mise en
+   page, thème sombre, lisibilité des messages d'erreur, comportement de la
+   popup quand on la ferme en cours de nettoyage. Rien de cela n'est testé.
+2. **Vérifier sur ta propre version de Chrome.** Toutes les mesures viennent de
+   Chromium 150. Sous 144, la catégorie des mots de passe fonctionne encore et
+   mon garde-fou ne se déclenche pas.
+3. **Décider du sort de « Autorisations de site ».** Le constat est maintenant
+   observé et non plus déduit : `clear()` laisse intactes les autorisations
+   posées par l'utilisateur. La catégorie a été requalifiée à ta demande ; la
+   retirer reste la seule option pleinement honnête.
+4. **Trancher les trois décisions de produit** encore ouvertes : le coffre qui
+   écrase sa sauvegarde précédente, les cookies partitionnés hors de portée, et
+   le cache HTTP filtrable par origine mais sur l'URL de la ressource.
+5. **Tester avec de vrais sites connectés.** Le parcours du coffre a été validé
+   avec des cookies fabriqués sur des domaines `.test`. Un cookie de session
+   réel porte des attributs — `__Host-`, `SameSite`, `Partitioned` — que mes
+   cookies de test n'avaient pas.
+6. **Décider du sort de `docs/superpowers/`** (3728 lignes d'archives) et de
+   `AUDIT.md`, qui n'a pas vocation à vivre éternellement à la racine.
+7. **Surveiller la CI au premier push.** Elle n'a jamais tourné sur GitHub. Le
+   job `browser` suppose un Chrome présent sur l'exécuteur, et le job `icons`
+   dépend de la version de Pillow.
 
 ## Phase 7 — vérification dans un navigateur réel
 
