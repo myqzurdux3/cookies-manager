@@ -99,7 +99,6 @@ input[type="checkbox"] { accent-color: var(--accent); }
 
 .hint { color: var(--muted); font-size: 12px; }
 
-.logo { display: block; width: 100%; height: 100%; }
 
 .brand { display: flex; align-items: center; gap: 10px; }
 .brand-mark { width: 26px; height: 26px; flex: none; }
