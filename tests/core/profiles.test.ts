@@ -243,4 +243,38 @@ describe('DEFAULT_PROFILES', () => {
       );
     });
   });
+
+  // `keepCookies` n'est atteignable que par l'import JSON : aucune interface ne
+  // sait le poser. Sa validation est donc le seul garde-fou.
+  it('accepte une liste de cookies nommés à l’import', async () => {
+    const store = createProfileStore(fakeArea());
+    const json = JSON.stringify([
+      {
+        id: 'a',
+        name: 'x',
+        since: 'all',
+        categories: ['cookies'],
+        keepRules: [{ pattern: 'github.com', keep: { cookies: true }, keepCookies: ['session'] }],
+      },
+    ]);
+    await store.importJson(json);
+    const [profil] = await store.list();
+    expect(profil!.keepRules[0]!.keepCookies).toEqual(['session']);
+  });
+
+  it('refuse une liste de cookies qui n’est pas un tableau de chaînes', async () => {
+    const store = createProfileStore(fakeArea());
+    for (const keepCookies of ['session', [42], [null]]) {
+      const json = JSON.stringify([
+        {
+          id: 'a',
+          name: 'x',
+          since: 'all',
+          categories: ['cookies'],
+          keepRules: [{ pattern: 'github.com', keep: { cookies: true }, keepCookies }],
+        },
+      ]);
+      await expect(store.importJson(json)).rejects.toThrow(/liste de cookies invalide/);
+    }
+  });
 });
