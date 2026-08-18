@@ -35,6 +35,13 @@ describe('buildCleaners', () => {
     expect(ids.sort()).toEqual([...ALL_CATEGORIES].sort());
   });
 
+  it('transmet la version de Chrome au cleaner des mots de passe', async () => {
+    const cleaners = buildCleaners(fakeChrome(), async () => [], 144);
+    const passwords = cleaners.find((cleaner) => cleaner.id === 'passwords')!;
+    const report = await passwords.clean({ category: 'passwords', since: 0, keepRules: [] });
+    expect(report.status).toBe('failed');
+  });
+
   it('déclare la finesse réelle de chaque catégorie', () => {
     const byId = new Map(buildCleaners(fakeChrome(), async () => []).map((c) => [c.id, c.perSite]));
     expect(byId.get('cookies')).toBe('exact');

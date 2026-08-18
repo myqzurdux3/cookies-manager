@@ -11,12 +11,14 @@ import type { RestoreFailure, RestoreReport } from './core/restore';
 import { buildCleaners, cachedKnownHosts } from './cleaners/index';
 import type { ChromeLike } from './cleaners/index';
 import { deletableCookies } from './cleaners/cookies';
+import { chromeMajorVersion } from './cleaners/credentials';
 
 const api = chrome as unknown as ChromeLike;
 const area = chrome.storage.local;
 const store = createProfileStore(area);
 const settingsStore = createSettingsStore(area);
 const vault = createVault(crypto, area);
+const chromeMajor = chromeMajorVersion(navigator.userAgent);
 
 /**
  * La phrase secrète ne vit que le temps d'une purge : elle arrive par message
@@ -52,7 +54,7 @@ async function backupCookies(categoryPlan: CategoryPlan): Promise<void> {
  * Construire les onze cleaners ne coûte que onze objets littéraux.
  */
 function createRunEngine() {
-  return createEngine(buildCleaners(api, cachedKnownHosts(api)), area, {
+  return createEngine(buildCleaners(api, cachedKnownHosts(api), chromeMajor), area, {
     backup: async (categoryPlan) => {
       const settings = await settingsStore.get();
       if (!settings.vaultEnabled) return;

@@ -67,7 +67,11 @@ export function cachedKnownHosts(api: ChromeLike): OriginSource {
   };
 }
 
-export function buildCleaners(api: ChromeLike, knownHosts: OriginSource): Cleaner[] {
+export function buildCleaners(
+  api: ChromeLike,
+  knownHosts: OriginSource,
+  chromeMajor: number | null = null,
+): Cleaner[] {
   return [
     createCookiesCleaner(api),
     createStorageCleaner(api, 'localStorage', knownHosts),
@@ -77,8 +81,8 @@ export function buildCleaners(api: ChromeLike, knownHosts: OriginSource): Cleane
     createHttpCacheCleaner(api),
     createHistoryCleaner(api as HistoryApi),
     createDownloadsCleaner(api as DownloadsApi),
-    createCredentialsCleaner(api, 'formData'),
-    createCredentialsCleaner(api, 'passwords'),
+    createCredentialsCleaner(api, 'formData', chromeMajor),
+    createCredentialsCleaner(api, 'passwords', chromeMajor),
     createSiteSettingsCleaner(api as ContentSettingsApi),
   ];
 }

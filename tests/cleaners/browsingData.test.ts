@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { createStorageCleaner } from '../../src/cleaners/storage';
 import { createHttpCacheCleaner } from '../../src/cleaners/httpCache';
-import { createCredentialsCleaner } from '../../src/cleaners/credentials';
+import {
+  chromeMajorVersion,
+  createCredentialsCleaner,
+  PASSWORDS_REMOVED_FROM,
+} from '../../src/cleaners/credentials';
 import type { CategoryPlan } from '../../src/core/planner';
 
 function fakeApi() {
@@ -120,5 +124,68 @@ describe('createCredentialsCleaner', () => {
     const { api, calls } = fakeApi();
     await createCredentialsCleaner(api, 'formData').clean(plan('formData', [], 0));
     expect(calls[0]!.types).toEqual({ formData: true });
+  });
+
+  it("refuse d'effacer les mots de passe sur un Chrome qui les ignore", async () => {
+    const { api, calls } = fakeApi();
+    const cleaner = createCredentialsCleaner(api, 'passwords', PASSWORDS_REMOVED_FROM);
+    const report = await cleaner.clean(plan('passwords', [], 0));
+
+    // Ne pas appeler l'API : elle résoudrait sans rien faire, et le rapport
+    // annoncerait « vidé entièrement » pour une suppression qui n'a pas eu lieu.
+    expect(calls).toEqual([]);
+    expect(report.status).toBe('failed');
+    expect(report.error).toMatch(/Chrome 144/);
+  });
+
+  it("l'annonce aussi dans l'aperçu, avant toute confirmation", async () => {
+    const preview = await createCredentialsCleaner(
+      fakeApi().api,
+      'passwords',
+      PASSWORDS_REMOVED_FROM,
+    ).preview(plan('passwords', []));
+    expect(preview.note).toMatch(/Chrome 144/);
+  });
+
+  it('laisse les données de formulaire intactes : elles ne sont pas concernées', async () => {
+    const { api, calls } = fakeApi();
+    const report = await createCredentialsCleaner(api, 'formData', PASSWORDS_REMOVED_FROM).clean(
+      plan('formData', [], 0),
+    );
+    expect(calls[0]!.types).toEqual({ formData: true });
+    expect(report.status).toBe('ok');
+  });
+
+  it('efface encore les mots de passe sur un Chrome antérieur', async () => {
+    const { api, calls } = fakeApi();
+    const report = await createCredentialsCleaner(
+      api,
+      'passwords',
+      PASSWORDS_REMOVED_FROM - 1,
+    ).clean(plan('passwords', [], 0));
+    expect(calls[0]!.types).toEqual({ passwords: true });
+    expect(report.status).toBe('ok');
+  });
+});
+
+describe('chromeMajorVersion', () => {
+  it('lit la version majeure de Chrome', () => {
+    expect(
+      chromeMajorVersion(
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
+      ),
+    ).toBe(144);
+  });
+
+  it('lit aussi celle de Brave, qui annonce Chrome', () => {
+    expect(
+      chromeMajorVersion(
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Brave/151',
+      ),
+    ).toBe(151);
+  });
+
+  it("rend null quand la version est illisible, pour ne rien supposer", () => {
+    expect(chromeMajorVersion('Mozilla/5.0 (compatible; inconnu)')).toBeNull();
   });
 });
