@@ -20,9 +20,12 @@ export interface SettingsStore {
   save(settings: Settings): Promise<void>;
 }
 
+function isValidRetention(days: unknown): days is number {
+  return typeof days === 'number' && Number.isInteger(days) && days >= 1 && days <= MAX_RETENTION_DAYS;
+}
+
 function validate(settings: Settings): void {
-  const days = settings.vaultRetentionDays;
-  if (!Number.isInteger(days) || days < 1 || days > MAX_RETENTION_DAYS) {
+  if (!isValidRetention(settings.vaultRetentionDays)) {
     throw new Error(`rétention invalide : attendu un entier de 1 à ${MAX_RETENTION_DAYS} jours`);
   }
 }
@@ -40,10 +43,12 @@ export function createSettingsStore(area: StorageArea): SettingsStore {
           typeof partial.vaultEnabled === 'boolean'
             ? partial.vaultEnabled
             : DEFAULT_SETTINGS.vaultEnabled,
-        vaultRetentionDays:
-          typeof partial.vaultRetentionDays === 'number'
-            ? partial.vaultRetentionDays
-            : DEFAULT_SETTINGS.vaultRetentionDays,
+        // `save` valide déjà, mais un stockage abîmé ou édité à la main peut
+        // contenir n'importe quoi. Une rétention NaN rendrait la comparaison de
+        // `purgeExpired` toujours fausse : le coffre ne serait jamais purgé.
+        vaultRetentionDays: isValidRetention(partial.vaultRetentionDays)
+          ? partial.vaultRetentionDays
+          : DEFAULT_SETTINGS.vaultRetentionDays,
       };
     },
 

@@ -54,4 +54,26 @@ describe('createSettingsStore', () => {
     const store = createSettingsStore(fakeArea());
     await expect(store.save({ vaultEnabled: true, vaultRetentionDays: 2.5 })).rejects.toThrow(/rétention/i);
   });
+
+  it('remplace une rétention hors bornes par le défaut au lieu de la propager', async () => {
+    for (const stored of [0, -5, 1000, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const store = createSettingsStore(
+        fakeArea({ settings: { vaultEnabled: true, vaultRetentionDays: stored } }),
+      );
+      const settings = await store.get();
+      // Une rétention NaN rend `now - createdAt < NaN` toujours faux : le coffre
+      // ne serait jamais purgé, et des jetons de session vivraient indéfiniment.
+      expect(settings.vaultRetentionDays).toBe(DEFAULT_SETTINGS.vaultRetentionDays);
+      expect(settings.vaultEnabled).toBe(true);
+    }
+  });
+
+  it('garde une rétention valide aux deux bornes', async () => {
+    for (const stored of [1, MAX_RETENTION_DAYS]) {
+      const store = createSettingsStore(
+        fakeArea({ settings: { vaultEnabled: false, vaultRetentionDays: stored } }),
+      );
+      expect((await store.get()).vaultRetentionDays).toBe(stored);
+    }
+  });
 });
