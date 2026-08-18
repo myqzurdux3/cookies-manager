@@ -39,9 +39,20 @@ Avant d'ajouter ou de modifier une catégorie de nettoyage, lire
 ne font pas ce que leur nom laisse croire, et ce fichier documente ce qui a été
 vérifié, avec ses sources.
 
+## Vérification en navigateur
+
+`npm run verify:browser` construit puis charge l'extension dans une instance
+jetable de Chrome ou Brave, en headless, et exerce le vrai chemin des messages :
+keep-list, aperçu contre nettoyage, sauvegarde et restauration du coffre, rejet
+d'un message inconnu. Le profil est neuf et supprimé à la fin ; votre profil
+personnel n'est jamais touché.
+
+Ce script ne vérifie rien de visuel.
+
 ## Recette manuelle
 
-Les tests ne touchent aucun navigateur. Avant de publier, jouer
+Les tests unitaires ne touchent aucun navigateur, et le script ci-dessus ne voit
+rien de l'interface. Avant de publier, jouer
 [docs/recette-manuelle.md](docs/recette-manuelle.md) sur un profil Chrome dédié.
 
 ## Icônes

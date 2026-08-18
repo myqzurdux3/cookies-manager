@@ -45,11 +45,14 @@ describe('hostOf', () => {
 
 /**
  * Faux plus fidèle que `fakeApi` : il honore `startTime`, `endTime` et
- * `maxResults` comme le fait `chrome.history.search`. `endTime` est traité
- * comme **inclusif** — la documentation Chrome ne tranche pas, et c'est le cas
- * qui met la pagination en défaut.
+ * `maxResults` comme le fait `chrome.history.search`.
+ *
+ * `inclusif` choisit la sémantique de `endTime`. Mesuré dans Chromium 150,
+ * `endTime` est **exclusif** : une recherche bornée à `lastVisitTime` exact ne
+ * rend rien. La documentation ne le dit nulle part, et les deux cas sont donc
+ * couverts — la pagination doit tenir sans dépendre de ce détail.
  */
-function pagingApi(visits: Visit[], pageSize: number) {
+function pagingApi(visits: Visit[], pageSize: number, inclusif = true) {
   const deleted: string[] = [];
   const searches: { startTime: number; endTime?: number }[] = [];
   return {
@@ -63,7 +66,9 @@ function pagingApi(visits: Visit[], pageSize: number) {
           return visits
             .filter((visit) => {
               const at = visit.lastVisitTime ?? 0;
-              return at >= query.startTime && (query.endTime === undefined || at <= query.endTime);
+              if (at < query.startTime) return false;
+              if (query.endTime === undefined) return true;
+              return inclusif ? at <= query.endTime : at < query.endTime;
             })
             .sort((a, b) => (b.lastVisitTime ?? 0) - (a.lastVisitTime ?? 0))
             .slice(0, Math.min(query.maxResults, pageSize));
@@ -161,5 +166,22 @@ describe('createHistoryCleaner', () => {
     // doublons, le nettoyage les dédoublonnait. Les deux nombres divergeaient.
     expect(preview.items).toBe(deleted.length);
     expect(preview.items).toBe(4);
+  });
+
+  it('pagine correctement aussi avec un endTime exclusif, comme le vrai Chrome', async () => {
+    const visits: Visit[] = [
+      { url: 'https://a.example/1', lastVisitTime: 400 },
+      { url: 'https://b.example/2', lastVisitTime: 300 },
+      { url: 'https://c.example/3', lastVisitTime: 200 },
+      { url: 'https://d.example/4', lastVisitTime: 100 },
+    ];
+    const preview = await createHistoryCleaner(pagingApi(visits, 2, false).api).preview(
+      plan([], 0),
+    );
+    const { api, deleted } = pagingApi(visits, 2, false);
+    await createHistoryCleaner(api).clean(plan([], 0));
+
+    expect(preview.items).toBe(4);
+    expect(deleted).toHaveLength(4);
   });
 });

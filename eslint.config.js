@@ -17,7 +17,21 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.js'],
+    // Scripts hors du programme TypeScript : pas d'analyse typée, et les
+    // globales de Node plutôt que celles du navigateur.
+    files: ['**/*.js', '**/*.mjs'],
     extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: {
+      parserOptions: { projectService: false, project: false },
+      globals: {
+        console: 'readonly',
+        fetch: 'readonly',
+        process: 'readonly',
+        WebSocket: 'readonly',
+        AbortSignal: 'readonly',
+        setTimeout: 'readonly',
+        URL: 'readonly',
+      },
+    },
   },
 );
