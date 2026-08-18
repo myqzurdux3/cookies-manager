@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  COLUMNS,
+  columns,
   PER_SITE,
   UNFILTERABLE,
   groupState,
@@ -26,16 +26,16 @@ describe('PER_SITE', () => {
   });
 });
 
-describe('COLUMNS et UNFILTERABLE', () => {
+describe('columns() et UNFILTERABLE', () => {
   it('couvrent ensemble toutes les catégories, sans doublon', () => {
-    const shown = COLUMNS.flatMap((column) => column.categories);
+    const shown = columns().flatMap((column) => column.categories);
     const all = [...shown, ...UNFILTERABLE].sort();
     expect(all).toEqual([...ALL_CATEGORIES].sort());
     expect(new Set(all).size).toBe(all.length);
   });
 
   it('ne met dans le tableau que des catégories réellement filtrables', () => {
-    for (const category of COLUMNS.flatMap((c) => c.categories)) {
+    for (const category of columns().flatMap((c) => c.categories)) {
       expect(PER_SITE[category]).not.toBe('none');
     }
   });
@@ -45,7 +45,7 @@ describe('COLUMNS et UNFILTERABLE', () => {
   });
 
   it('regroupe les quatre stockages web en une colonne', () => {
-    const storage = COLUMNS.find((column) => column.key === 'storage')!;
+    const storage = columns().find((column) => column.key === 'storage')!;
     expect([...storage.categories].sort()).toEqual([
       'cacheStorage',
       'indexedDB',

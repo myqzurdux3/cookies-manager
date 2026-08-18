@@ -1,12 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "Cookies Manager",
-  "description": "Suppression des données de navigation avec conservation par site.",
+  "name": "__MSG_extensionName__",
+  "description": "__MSG_extensionDescription__",
   "version": "0.1.0",
+  "default_locale": "en",
   "permissions": ["browsingData", "cookies", "storage"],
   "optional_permissions": ["history", "downloads", "contentSettings"],
   "host_permissions": ["<all_urls>"],
-  "background": { "service_worker": "background.js", "type": "module" },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",
@@ -15,7 +19,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Cookies Manager",
+    "default_title": "__MSG_extensionName__",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png",

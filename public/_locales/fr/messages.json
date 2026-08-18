@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "Cookies Manager",
+    "description": "Nom affiché par le navigateur et sur le Web Store."
+  },
+  "extensionDescription": {
+    "message": "Suppression des données de navigation avec conservation par site.",
+    "description": "Description courte affichée à côté du nom."
+  }
+}

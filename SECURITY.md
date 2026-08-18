@@ -4,7 +4,7 @@
 
 Ouvrez un [avis de sécurité privé](https://github.com/myqzurdux3/cookies-manager/security/advisories/new)
 plutôt qu'une issue publique. Décrivez le comportement observé, la version de
-Chrome ou Brave, et de quoi reproduire.
+Chrome, et de quoi reproduire.
 
 **Ne collez jamais de vraies valeurs de cookies** dans un rapport, public ou
 privé : ce sont des jetons de session actifs.

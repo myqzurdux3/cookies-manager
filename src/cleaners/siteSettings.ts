@@ -1,3 +1,4 @@
+import { msg } from '../i18n';
 import type { CategoryPlan } from '../core/planner';
 import type { Cleaner, CleanReport, KeepRule, Preview } from '../core/types';
 
@@ -29,10 +30,6 @@ export type ContentSettingsApi = {
   contentSettings: Record<string, SettingApi>;
 };
 
-const WILDCARD_NOTE =
-  "Les motifs à wildcard ne sont pas restaurables pour cette catégorie : l'API exige une URL " +
-  'concrète pour relire un réglage. Utilisez des motifs exacts pour les autorisations à conserver.';
-
 /**
  * `contentSettings.<type>.clear()` n'efface que « all content setting rules set
  * by this extension » : les règles posées par une extension vivent dans un
@@ -42,10 +39,6 @@ const WILDCARD_NOTE =
  * Le dire dans l'aperçu est le minimum : sans cette note, la case promettrait
  * une suppression qui n'a pas lieu.
  */
-const SCOPE_NOTE =
-  'Cette catégorie ne retire que les réglages posés par cette extension. Les autorisations que ' +
-  'vous avez accordées vous-même dans Chrome ne peuvent pas être effacées par une extension : ' +
-  'passez par Chrome, Paramètres, Confidentialité et sécurité, Paramètres des sites.';
 
 /**
  * Seules les règles protégeant explicitement cette catégorie comptent : une règle
@@ -73,7 +66,9 @@ export function createSiteSettingsCleaner(api: ContentSettingsApi): Cleaner {
       return {
         countable: false,
         items: hosts.length,
-        note: hasWildcard ? `${SCOPE_NOTE} ${WILDCARD_NOTE}` : SCOPE_NOTE,
+        note: hasWildcard
+          ? `${msg().notes.siteSettingsScope} ${msg().notes.siteSettingsWildcard}`
+          : msg().notes.siteSettingsScope,
       };
     },
 

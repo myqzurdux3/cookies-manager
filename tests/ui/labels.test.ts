@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  CATEGORY_LABELS,
+  categoryLabel,
   formatRestoreReport,
   formatRunSummary,
   formatVaultReplacement,
@@ -14,10 +14,10 @@ import {
 } from '../../src/ui/labels';
 import { ALL_CATEGORIES } from '../../src/core/types';
 
-describe('CATEGORY_LABELS', () => {
+describe('categoryLabel', () => {
   it('nomme chaque catégorie', () => {
     for (const category of ALL_CATEGORIES) {
-      expect(CATEGORY_LABELS[category]).toBeTruthy();
+      expect(categoryLabel(category)).toBeTruthy();
     }
   });
 });

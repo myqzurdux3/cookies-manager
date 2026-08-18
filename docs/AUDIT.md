@@ -680,3 +680,54 @@ après                                  → visibles [] · dans la cloison ["par
 
 Un nettoyage total laisse donc ces cookies intacts, indépendamment de toute
 keep-list.
+
+## Phase 9 — internationalisation
+
+Demandée après coup : « je veux que l'app soit aussi dispo en anglais ». Toute
+l'interface était en français, dans le balisage, dans les libellés, et dans les
+notes rédigées par le service worker.
+
+### Ce qui a été fait
+
+| Élément            | Choix                                                                                                                                  |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Dictionnaires      | `src/i18n/fr.ts` sert de référence, `Dict = typeof FR` ; `en.ts` est typé `Dict`, donc une clé oubliée est une erreur de compilation.  |
+| Texte enrichi      | Les paragraphes mêlant `<code>` et `<strong>` sont des tableaux de fragments typés, rendus par `createElement`. Aucun `innerHTML`.     |
+| Balisage figé      | `data-i18n`, `data-i18n-placeholder`, `data-i18n-rich`. Le HTML garde son texte français : une clé manquante laisse une page lisible.  |
+| Choix de la langue | `language: 'auto' \| 'fr' \| 'en'` dans les réglages. `'auto'` suit `chrome.i18n.getUILanguage()`, français si elle commence par `fr`. |
+| Service worker     | La langue est relue à **chaque message** : le worker est suspendu dès qu'il est inactif, et les notes d'aperçu naissent là-bas.        |
+| `manifest.json`    | `_locales/{en,fr}` pour le nom et la description, `default_locale: en`. C'est le seul mécanisme que Chrome lit lui-même.               |
+
+### Ce qui a été mesuré, pas supposé
+
+`npm run verify:browser` exerce le trajet complet dans Chromium : enregistrer
+`language: 'en'`, demander un aperçu, lire la note revenue du service worker,
+rebasculer en français sans redémarrer le worker. 13/13.
+
+```
+ok  les notes suivent la langue enregistrée — Partitioned cookies (CHIPS) are not handled: …
+ok  et rebasculent sans redémarrer le worker — Les cookies cloisonnés par site (CHIPS) …
+```
+
+Deux vérifications ont d'abord échoué : `SAVE_SETTINGS` refusait un objet sans
+`language`, et le script en envoyait un. Le refus a été **gardé** — remplir le
+champ par défaut aurait laissé un client ancien écraser silencieusement le choix
+de l'utilisateur — et c'est le script qui a été corrigé.
+
+### Ce qui n'a pas été fait
+
+- **Les profils déjà créés ne sont pas renommés.** Les profils par défaut sont
+  nommés à la première ouverture, dans la langue d'alors ; changer de langue
+  ensuite ne les renomme pas, exactement comme un profil que vous avez nommé
+  vous-même. Les renommer voudrait dire distinguer un nom d'origine d'un nom
+  choisi, donc stocker cette distinction — pour un gain nul une fois le profil
+  personnalisé.
+- **Le dépôt reste en français.** README, `docs/`, commentaires et messages de
+  commit. Seule l'application est bilingue. Traduire la documentation est un
+  travail distinct, qui doublerait ce qu'il faut tenir à jour.
+- **Aucune troisième langue.** L'architecture l'accepte — un fichier de plus et
+  une entrée dans `LANGUAGES` — mais rien n'a été prévu pour les langues à
+  pluriels multiples : `summary.deleted` teste `n > 1`, ce qui suffit au
+  français et à l'anglais et pas au-delà.
+- **Les captures du README restent en français**, avec la langue fixée dans
+  `tools/screenshots.mjs` pour qu'elles ne suivent pas la machine de build.

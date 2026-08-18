@@ -25,8 +25,12 @@ describe('createSettingsStore', () => {
 
   it('relit ce qui a été enregistré', async () => {
     const store = createSettingsStore(fakeArea());
-    await store.save({ vaultEnabled: true, vaultRetentionDays: 3 });
-    expect(await store.get()).toEqual({ vaultEnabled: true, vaultRetentionDays: 3 });
+    await store.save({ vaultEnabled: true, vaultRetentionDays: 3, language: 'en' });
+    expect(await store.get()).toEqual({
+      vaultEnabled: true,
+      vaultRetentionDays: 3,
+      language: 'en',
+    });
   });
 
   it('retombe sur les défauts devant un contenu malformé', async () => {
@@ -39,24 +43,49 @@ describe('createSettingsStore', () => {
     expect(await store.get()).toEqual({
       vaultEnabled: true,
       vaultRetentionDays: DEFAULT_SETTINGS.vaultRetentionDays,
+      language: DEFAULT_SETTINGS.language,
     });
   });
 
   it('refuse une rétention hors bornes', async () => {
     const store = createSettingsStore(fakeArea());
-    await expect(store.save({ vaultEnabled: true, vaultRetentionDays: 0 })).rejects.toThrow(
-      /rétention/i,
-    );
     await expect(
-      store.save({ vaultEnabled: true, vaultRetentionDays: MAX_RETENTION_DAYS + 1 }),
+      store.save({ vaultEnabled: true, vaultRetentionDays: 0, language: 'auto' }),
     ).rejects.toThrow(/rétention/i);
+    await expect(
+      store.save({
+        vaultEnabled: true,
+        vaultRetentionDays: MAX_RETENTION_DAYS + 1,
+        language: 'auto',
+      }),
+    ).rejects.toThrow(/rétention/i);
+  });
+
+  it('refuse une langue inconnue', async () => {
+    // La préférence n'est pas saisie librement dans l'interface, mais elle
+    // traverse `SAVE_SETTINGS` : un message forgé ne doit pas se stocker.
+    const store = createSettingsStore(fakeArea());
+    await expect(
+      store.save({
+        vaultEnabled: false,
+        vaultRetentionDays: 7,
+        language: 'klingon' as unknown as 'auto',
+      }),
+    ).rejects.toThrow(/langue/i);
+  });
+
+  it('retombe sur « automatique » devant une langue enregistrée illisible', async () => {
+    const store = createSettingsStore(
+      fakeArea({ settings: { vaultEnabled: false, vaultRetentionDays: 7, language: 42 } }),
+    );
+    expect((await store.get()).language).toBe('auto');
   });
 
   it('refuse une rétention non entière', async () => {
     const store = createSettingsStore(fakeArea());
-    await expect(store.save({ vaultEnabled: true, vaultRetentionDays: 2.5 })).rejects.toThrow(
-      /rétention/i,
-    );
+    await expect(
+      store.save({ vaultEnabled: true, vaultRetentionDays: 2.5, language: 'auto' }),
+    ).rejects.toThrow(/rétention/i);
   });
 
   it('remplace une rétention hors bornes par le défaut au lieu de la propager', async () => {

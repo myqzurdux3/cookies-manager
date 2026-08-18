@@ -12,9 +12,9 @@ const PROFILE = {
   keepRules: [{ pattern: 'github.com', keep: { cookies: true } }],
 };
 
-async function mountPopup(reply: (type: string) => Reply) {
+async function mountPopup(reply: (type: string) => Reply, uiLanguage = 'fr-FR') {
   mountBody(popupHtml);
-  const chrome = stubChrome(reply);
+  const chrome = stubChrome(reply, uiLanguage);
   vi.resetModules();
   await import('../../src/ui/popup/popup');
   await settle();
@@ -26,7 +26,8 @@ function ok(data: unknown): Reply {
 }
 
 const HAPPY = (type: string): Reply => {
-  if (type === 'GET_SETTINGS') return ok({ vaultEnabled: false, vaultRetentionDays: 7 });
+  if (type === 'GET_SETTINGS')
+    return ok({ vaultEnabled: false, vaultRetentionDays: 7, language: 'auto' });
   if (type === 'LIST_PROFILES') return ok([PROFILE]);
   if (type === 'PREVIEW')
     return ok([{ category: 'cookies', preview: { countable: true, items: 3 } }]);
@@ -88,7 +89,9 @@ describe('popup', () => {
 
   it("n'envoie rien et le dit quand la phrase du coffre manque", async () => {
     const chrome = await mountPopup((type) =>
-      type === 'GET_SETTINGS' ? ok({ vaultEnabled: true, vaultRetentionDays: 7 }) : HAPPY(type),
+      type === 'GET_SETTINGS'
+        ? ok({ vaultEnabled: true, vaultRetentionDays: 7, language: 'auto' })
+        : HAPPY(type),
     );
 
     clickProfile();
@@ -223,7 +226,9 @@ describe('popup', () => {
 
   it('n’avertit pas quand aucun coffre n’existe encore', async () => {
     await mountPopup((type) =>
-      type === 'GET_SETTINGS' ? ok({ vaultEnabled: true, vaultRetentionDays: 7 }) : HAPPY(type),
+      type === 'GET_SETTINGS'
+        ? ok({ vaultEnabled: true, vaultRetentionDays: 7, language: 'auto' })
+        : HAPPY(type),
     );
 
     clickProfile();
@@ -264,5 +269,37 @@ describe('popup', () => {
     expect(document.querySelector<HTMLElement>('#vault-existing')!.hidden).toBe(true);
     expect(document.querySelector<HTMLElement>('#preview')!.hidden).toBe(false);
     expect(document.querySelector<HTMLButtonElement>('#confirm')!.disabled).toBe(false);
+  });
+});
+
+describe('langue de la popup', () => {
+  it('suit le navigateur, balisage figé comme lignes construites', async () => {
+    await mountPopup(HAPPY, 'en-US');
+
+    expect(document.documentElement.lang).toBe('en');
+    expect(text('#chooser')).toContain('Cleaning profile');
+    expect(text('#confirm')).toBe('Clean');
+    // Le méta du profil (« last day · 1 category ») est construit en JavaScript :
+    // il ne bascule que si le dictionnaire est appliqué avant le premier rendu.
+    expect(text('#profiles')).toContain('last day');
+  });
+
+  it('affiche l’aperçu et le rapport dans la langue choisie', async () => {
+    await mountPopup(
+      (type) =>
+        type === 'GET_SETTINGS'
+          ? ok({ vaultEnabled: false, vaultRetentionDays: 7, language: 'en' })
+          : HAPPY(type),
+      'fr-FR',
+    );
+
+    document.querySelector<HTMLButtonElement>('#profiles button')!.click();
+    await settle();
+    expect(text('#preview-list')).toContain('3 to delete');
+
+    document.querySelector<HTMLButtonElement>('#confirm')!.click();
+    await settle();
+    expect(text('#report-summary')).toContain('3 items deleted');
+    expect(text('#report-list')).toContain('3 deleted');
   });
 });

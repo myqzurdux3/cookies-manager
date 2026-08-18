@@ -51,7 +51,7 @@ vérifié, avec ses sources.
 ## Vérification en navigateur
 
 `npm run verify:browser` construit puis charge l'extension dans une instance
-jetable de Chrome ou Brave, en headless, et exerce le vrai chemin des messages :
+jetable de Chrome, en headless, et exerce le vrai chemin des messages :
 keep-list, aperçu contre nettoyage, sauvegarde et restauration du coffre,
 avertissement de remplacement du coffre, masquage réel des écrans de la popup,
 et rejet d'un message inconnu — dix vérifications. Le profil est neuf et supprimé à la fin ; votre profil

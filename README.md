@@ -6,6 +6,10 @@
 </p>
 
 <p align="center">
+  <em>Interface en français et en anglais — English UI included.</em>
+</p>
+
+<p align="center">
   <a href="https://github.com/myqzurdux3/cookies-manager/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/myqzurdux3/cookies-manager/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="Licence MIT" src="https://img.shields.io/badge/licence-MIT-blue.svg"></a>
   <img alt="Manifest V3" src="https://img.shields.io/badge/manifest-v3-lightgrey.svg">
@@ -37,6 +41,13 @@ empaquetée » → choisir `dist/`.
 
 Cliquer sur l'icône ouvre la popup : choisir un profil, lire l'aperçu, nettoyer.
 Deux profils existent par défaut, « léger » et « complet ».
+
+## Langue
+
+L'interface suit la langue du navigateur : français si elle commence par `fr`,
+anglais sinon. La page d'options permet de forcer l'une ou l'autre ; le
+changement s'applique immédiatement, y compris aux notes que le service worker
+rédige lui-même.
 
 ## Configuration
 

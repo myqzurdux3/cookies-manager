@@ -18,15 +18,16 @@ function ok(data: unknown): Reply {
 
 const HAPPY = (type: string): Reply => {
   if (type === 'LIST_PROFILES') return ok([PROFILE]);
-  if (type === 'GET_SETTINGS') return ok({ vaultEnabled: false, vaultRetentionDays: 7 });
+  if (type === 'GET_SETTINGS')
+    return ok({ vaultEnabled: false, vaultRetentionDays: 7, language: 'auto' });
   if (type === 'VAULT_DESCRIBE') return ok(null);
   if (type === 'EXPORT') return ok('[]');
   return ok(null);
 };
 
-async function mountOptions(reply: (type: string) => Reply) {
+async function mountOptions(reply: (type: string) => Reply, uiLanguage = 'fr-FR') {
   mountBody(optionsHtml);
-  const chrome = stubChrome(reply);
+  const chrome = stubChrome(reply, uiLanguage);
   vi.resetModules();
   await import('../../src/ui/options/options');
   await settle();
@@ -370,5 +371,104 @@ describe('page d’options', () => {
     expect(stockage.indeterminate).toBe(true);
     expect(stockage.checked).toBe(false);
     expect(stockage.title).toMatch(/conservé en partie/i);
+  });
+});
+
+describe('langue de la page d’options', () => {
+  it('suit le navigateur quand la préférence est « automatique »', async () => {
+    await mountOptions(HAPPY, 'en-GB');
+
+    expect(document.documentElement.lang).toBe('en');
+    expect(text('#unfilterable')).toContain('Ignore the keep-list');
+    expect(text('#categories')).toContain('Local storage');
+    expect(text('#keeplist')).toContain('Site kept');
+    expect(document.querySelector<HTMLSelectElement>('#language')!.value).toBe('auto');
+  });
+
+  it('laisse une préférence explicite l’emporter sur le navigateur', async () => {
+    await mountOptions(
+      (type) =>
+        type === 'GET_SETTINGS'
+          ? ok({ vaultEnabled: false, vaultRetentionDays: 7, language: 'en' })
+          : HAPPY(type),
+      'fr-FR',
+    );
+
+    expect(document.documentElement.lang).toBe('en');
+    expect(document.querySelector<HTMLSelectElement>('#language')!.value).toBe('en');
+  });
+
+  it('bascule la page entière et enregistre le choix', async () => {
+    const chrome = await mountOptions(HAPPY);
+    expect(text('#unfilterable')).toContain('Ignorent la keep-list');
+
+    const language = document.querySelector<HTMLSelectElement>('#language')!;
+    language.value = 'en';
+    language.dispatchEvent(new Event('change'));
+    await settle();
+
+    // Le balisage figé et les fragments construits en JavaScript doivent basculer
+    // ensemble : traduire l'un sans l'autre donnerait une page à moitié anglaise.
+    expect(document.querySelector('#add-pattern')!.textContent).toBe('Add a site');
+    expect(text('#unfilterable')).toContain('Ignore the keep-list');
+    expect(text('#categories')).toContain('Form data');
+
+    const saved = chrome.sent.find((message) => message.type === 'SAVE_SETTINGS');
+    expect(saved).toMatchObject({
+      settings: { language: 'en', vaultEnabled: false, vaultRetentionDays: 7 },
+    });
+  });
+
+  it('annonce un refus d’enregistrement sans revenir en arrière', async () => {
+    // La langue est appliquée avant d'être enregistrée : un refus doit se dire,
+    // dans la langue choisie, sans rendre la page illisible.
+    await mountOptions((type) =>
+      type === 'SAVE_SETTINGS' ? { ok: false, error: 'stockage plein' } : HAPPY(type),
+    );
+
+    const language = document.querySelector<HTMLSelectElement>('#language')!;
+    language.value = 'en';
+    language.dispatchEvent(new Event('change'));
+    await settle();
+
+    expect(text('#status')).toBe('Settings refused: stockage plein');
+    expect(document.querySelector('#add-pattern')!.textContent).toBe('Add a site');
+  });
+
+  it('date le coffre selon la langue active', async () => {
+    // `toLocaleString` reçoit la locale du dictionnaire : sans cela, un coffre
+    // s'afficherait daté à la française au milieu d'une page anglaise.
+    await mountOptions(
+      (type) =>
+        type === 'VAULT_DESCRIBE'
+          ? ok({ createdAt: Date.UTC(2026, 0, 31, 12), cookieCount: 2, domains: ['a.test'] })
+          : HAPPY(type),
+      'en-US',
+    );
+
+    expect(text('#vault-state')).toContain('Vault from');
+    expect(text('#vault-state')).toContain('1/31/2026');
+  });
+
+  it('désarme la suppression du coffre en changeant de langue', async () => {
+    // Le bouton armé porte une clé de traduction : le réécrire sans désarmer
+    // laisserait un bouton d'apparence neutre à un clic de l'effacement.
+    const chrome = await mountOptions(HAPPY);
+    click('#vault-clear');
+    await settle();
+    expect(text('#vault-clear')).toBe('Confirmer la suppression');
+
+    const language = document.querySelector<HTMLSelectElement>('#language')!;
+    language.value = 'en';
+    language.dispatchEvent(new Event('change'));
+    await settle();
+
+    expect(text('#vault-clear')).toBe('Delete the vault');
+
+    // Ce clic doit réarmer, pas effacer.
+    click('#vault-clear');
+    await settle();
+    expect(chrome.sent.filter((message) => message.type === 'VAULT_CLEAR')).toHaveLength(0);
+    expect(text('#vault-clear')).toBe('Confirm deletion');
   });
 });

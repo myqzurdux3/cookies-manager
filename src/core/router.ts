@@ -1,3 +1,4 @@
+import { msg } from '../i18n';
 import type { Engine } from './engine';
 import type { Message } from './messages';
 import { buildPlan } from './planner';
@@ -27,7 +28,7 @@ export type RouterDeps = {
 export function createRouter(deps: RouterDeps): (message: Message) => Promise<unknown> {
   async function profileById(id: string) {
     const profile = (await deps.profiles.list()).find((candidate) => candidate.id === id);
-    if (profile === undefined) throw new Error(`profil introuvable : ${id}`);
+    if (profile === undefined) throw new Error(msg().errors.profileNotFound(id));
     return profile;
   }
 
@@ -70,7 +71,9 @@ export function createRouter(deps: RouterDeps): (message: Message) => Promise<un
         // Le type Message est exhaustif, mais rien ne garantit qu'un message
         // reçu à l'exécution le respecte. Répondre `{ok: true, data: undefined}`
         // à un message inconnu ferait passer un bug d'appelant pour un succès.
-        throw new Error(`message inconnu : ${JSON.stringify((message as { type: unknown }).type)}`);
+        throw new Error(
+          msg().errors.unknownMessage(JSON.stringify((message as { type: unknown }).type)),
+        );
     }
   };
 }

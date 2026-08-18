@@ -1,3 +1,4 @@
+import { msg } from '../i18n';
 import type { StorageArea } from './profiles';
 
 /**
@@ -128,7 +129,7 @@ export function createVault(
     const stored = await area.get(VAULT_KEY);
     const value = stored[VAULT_KEY];
     if (value === undefined || value === null) return null;
-    if (!isRecord(value)) throw new Error('coffre illisible : enregistrement malformé');
+    if (!isRecord(value)) throw new Error(msg().errors.vaultMalformed);
     return value;
   }
 
@@ -159,7 +160,7 @@ export function createVault(
 
     async read(passphrase: string): Promise<StoredCookie[]> {
       const record = await load();
-      if (record === null) throw new Error('aucun coffre enregistré');
+      if (record === null) throw new Error(msg().errors.vaultMissing);
 
       let salt: Uint8Array<ArrayBuffer>;
       let iv: Uint8Array<ArrayBuffer>;
@@ -169,7 +170,7 @@ export function createVault(
         iv = fromBase64(record.iv);
         cipher = fromBase64(record.cipher);
       } catch {
-        throw new Error('coffre illisible : contenu corrompu');
+        throw new Error(msg().errors.vaultCorrupted);
       }
 
       const key = await deriveKey(passphrase, salt, record.iterations);
@@ -179,7 +180,7 @@ export function createVault(
       } catch {
         // AES-GCM authentifie le message : un échec signifie mauvaise clé ou
         // contenu altéré. On ne rend jamais de données partielles.
-        throw new Error('phrase incorrecte, ou coffre altéré');
+        throw new Error(msg().errors.vaultWrongPassphrase);
       }
 
       return JSON.parse(new TextDecoder().decode(plain)) as StoredCookie[];

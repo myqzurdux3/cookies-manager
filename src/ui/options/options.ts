@@ -1,12 +1,16 @@
 import { send } from '../../core/messages';
 import { normalizePattern } from '../../core/patterns';
 import type { RestoreReport } from '../../core/restore';
+import { DEFAULT_SETTINGS } from '../../core/settings';
 import type { Settings } from '../../core/settings';
 import { ALL_CATEGORIES } from '../../core/types';
 import type { Profile, Since } from '../../core/types';
 import type { VaultSummary } from '../../core/vault';
-import { CATEGORY_LABELS, formatRestoreReport, formatVaultState } from '../labels';
-import { COLUMNS, UNFILTERABLE, groupState, removeRule, toggleGroup } from './grid';
+import { applyPreference, msg } from '../../i18n';
+import type { LanguagePreference } from '../../i18n';
+import { categoryLabel, formatRestoreReport, formatVaultState } from '../labels';
+import { applyStaticText } from '../static';
+import { UNFILTERABLE, columns, groupState, removeRule, toggleGroup } from './grid';
 
 const select = document.querySelector<HTMLSelectElement>('#profile-select')!;
 const nameInput = document.querySelector<HTMLInputElement>('#name')!;
@@ -17,10 +21,20 @@ const newPattern = document.querySelector<HTMLInputElement>('#new-pattern')!;
 const statusEl = document.querySelector<HTMLParagraphElement>('#status')!;
 const importArea = document.querySelector<HTMLTextAreaElement>('#import-area')!;
 const unfilterableEl = document.querySelector<HTMLParagraphElement>('#unfilterable')!;
+const languageSelect = document.querySelector<HTMLSelectElement>('#language')!;
+
+// La langue du navigateur dès le chargement : les réglages enregistrés
+// arriveront quelques instants plus tard, et diront la même chose dans le cas
+// « automatique ». Sans cela, la page s'afficherait d'abord en français.
+applyPreference('auto');
+applyStaticText();
 
 let profiles: Profile[] = [];
 let current: Profile | null = null;
 let hideStatus: ReturnType<typeof setTimeout> | undefined;
+/** Derniers réglages enregistrés : changer de langue ne doit pas valider au
+ * passage une rétention en cours de saisie. */
+let saved: Settings = { ...DEFAULT_SETTINGS };
 
 /**
  * Un gestionnaire `async` passé tel quel à `addEventListener` rend une promesse
@@ -60,13 +74,13 @@ function renderCategories(): void {
       });
 
       const text = document.createElement('span');
-      text.textContent = CATEGORY_LABELS[category];
+      text.textContent = categoryLabel(category);
       label.append(input, text);
 
       if (category === 'passwords' || category === 'formData') {
         const warn = document.createElement('span');
         warn.className = 'danger-note';
-        warn.textContent = '— définitif, aucune exclusion par site';
+        warn.textContent = msg().options.dangerNote;
         label.append(warn);
       }
       return label;
@@ -75,21 +89,18 @@ function renderCategories(): void {
 }
 
 function renderUnfilterableNote(): void {
-  const names = UNFILTERABLE.map((category) => CATEGORY_LABELS[category]).join(' · ');
-  unfilterableEl.textContent =
-    `Ignorent la keep-list : ${names}. Ces catégories sont vidées en bloc et ne figurent donc ` +
-    `pas dans la grille. Depuis Chrome 144, la suppression des mots de passe par une extension ` +
-    `est refusée par le navigateur : l'extension le signale au lieu de prétendre l'avoir faite. ` +
-    `Voir docs/limites-navigateur.md.`;
+  const names = UNFILTERABLE.map(categoryLabel).join(' · ');
+  unfilterableEl.textContent = msg().options.unfilterableNote(names);
 }
 
 function renderKeeplist(): void {
   const header = document.createElement('tr');
   const siteHead = document.createElement('th');
-  siteHead.textContent = 'Site conservé';
+  siteHead.textContent = msg().options.colSite;
   header.append(siteHead);
 
-  for (const column of COLUMNS) {
+  const grid = columns();
+  for (const column of grid) {
     const th = document.createElement('th');
     th.textContent = column.label;
     if (column.hint !== undefined) th.title = column.hint;
@@ -97,15 +108,15 @@ function renderKeeplist(): void {
   }
 
   const removeHead = document.createElement('th');
-  removeHead.textContent = 'Retirer';
+  removeHead.textContent = msg().options.colRemove;
   header.append(removeHead);
 
   if (current!.keepRules.length === 0) {
     const empty = document.createElement('tr');
     const cell = document.createElement('td');
     cell.className = 'empty';
-    cell.colSpan = COLUMNS.length + 2;
-    cell.textContent = 'Aucun site conservé : tout sera supprimé.';
+    cell.colSpan = grid.length + 2;
+    cell.textContent = msg().options.emptyKeeplist;
     empty.append(cell);
     keeplistEl.replaceChildren(header, empty);
     return;
@@ -117,7 +128,7 @@ function renderKeeplist(): void {
     patternCell.textContent = rule.pattern;
     tr.append(patternCell);
 
-    for (const column of COLUMNS) {
+    for (const column of grid) {
       const td = document.createElement('td');
       const state = groupState(current!.keepRules, rule.pattern, column.categories);
 
@@ -127,10 +138,10 @@ function renderKeeplist(): void {
       input.indeterminate = state === 'partial';
       input.title =
         state === 'partial'
-          ? `${column.label} : conservé en partie. Cocher protège tout le groupe.`
+          ? msg().options.colPartial(column.label)
           : state === 'all'
-            ? `${column.label} conservé pour ce site`
-            : `${column.label} supprimé pour ce site`;
+            ? msg().options.colKept(column.label)
+            : msg().options.colRemoved(column.label);
 
       input.addEventListener('change', () => {
         current!.keepRules = toggleGroup(
@@ -151,11 +162,11 @@ function renderKeeplist(): void {
     removeBtn.type = 'button';
     removeBtn.className = 'remove';
     removeBtn.textContent = '✕';
-    removeBtn.title = `Retirer ${rule.pattern} de la liste des sites conservés`;
+    removeBtn.title = msg().options.removeTitle(rule.pattern);
     removeBtn.addEventListener('click', () => {
       current!.keepRules = removeRule(current!.keepRules, rule.pattern);
       renderKeeplist();
-      say(`${rule.pattern} retiré. Pensez à enregistrer le profil.`);
+      say(msg().options.removed(rule.pattern));
     });
     removeCell.append(removeBtn);
     tr.append(removeCell);
@@ -187,7 +198,7 @@ async function reload(selectId?: string): Promise<void> {
   try {
     profiles = (await send({ type: 'LIST_PROFILES' })) as Profile[];
   } catch (cause) {
-    say(`Profils illisibles : ${reason(cause)}`, true);
+    say(msg().options.profilesUnreadable(reason(cause)), true);
     return;
   }
   select.replaceChildren(...profiles.map(optionFor));
@@ -205,7 +216,7 @@ select.addEventListener('change', () => {
 onClick('#new-profile', () => {
   renderProfile({
     id: crypto.randomUUID(),
-    name: 'Nouveau profil',
+    name: msg().options.newProfileName,
     since: 'all',
     categories: ['cookies'],
     keepRules: [],
@@ -217,10 +228,10 @@ onClick('#delete-profile', async () => {
   try {
     await send({ type: 'DELETE_PROFILE', id: current.id });
   } catch (cause) {
-    say(`Suppression refusée : ${reason(cause)}`, true);
+    say(msg().options.deleteRefused(reason(cause)), true);
     return;
   }
-  say('Profil supprimé.');
+  say(msg().options.profileDeleted);
   await reload();
 });
 
@@ -229,12 +240,12 @@ onClick('#add-pattern', () => {
 
   const result = normalizePattern(newPattern.value);
   if (!result.ok) {
-    say(`Motif refusé : ${result.reason}`, true);
+    say(msg().options.patternRefused(result.reason), true);
     return;
   }
 
   if (current.keepRules.some((rule) => rule.pattern === result.pattern)) {
-    say(`${result.pattern} est déjà dans la liste.`, true);
+    say(msg().options.alreadyListed(result.pattern), true);
     return;
   }
 
@@ -243,8 +254,8 @@ onClick('#add-pattern', () => {
   renderKeeplist();
   say(
     result.changed
-      ? `Ajouté sous la forme ${result.pattern} — un wildcard s'écrit *.exemple.com. Pensez à enregistrer.`
-      : `${result.pattern} ajouté. Pensez à enregistrer le profil.`,
+      ? msg().options.addedNormalized(result.pattern)
+      : msg().options.added(result.pattern),
   );
 });
 
@@ -254,10 +265,10 @@ async function saveProfile(): Promise<void> {
   current.since = sinceSelect.value as Since;
   try {
     await send({ type: 'SAVE_PROFILE', profile: current });
-    say('Profil enregistré.');
+    say(msg().options.profileSaved);
     await reload(current.id);
   } catch (cause) {
-    say(`Enregistrement refusé : ${reason(cause)}`, true);
+    say(msg().options.saveRefused(reason(cause)), true);
   }
 }
 
@@ -272,19 +283,19 @@ onClick('#export', async () => {
   try {
     importArea.value = (await send({ type: 'EXPORT' })) as string;
   } catch (cause) {
-    say(`Export refusé : ${reason(cause)}`, true);
+    say(msg().options.exportRefused(reason(cause)), true);
     return;
   }
-  say('Profils exportés dans la zone de texte.');
+  say(msg().options.exported);
 });
 
 onClick('#import', async () => {
   try {
     await send({ type: 'IMPORT', json: importArea.value });
-    say('Profils importés.');
+    say(msg().options.imported);
     await reload();
   } catch (cause) {
-    say(`Import refusé : ${cause instanceof Error ? cause.message : String(cause)}`, true);
+    say(msg().options.importRefused(reason(cause)), true);
   }
 });
 
@@ -297,17 +308,68 @@ const vaultPassphrase = document.querySelector<HTMLInputElement>('#vault-passphr
 
 async function refreshVaultState(): Promise<void> {
   const summary = (await send({ type: 'VAULT_DESCRIBE' })) as VaultSummary | null;
-  vaultState.textContent = formatVaultState(summary, (at) => new Date(at).toLocaleString('fr-FR'));
+  vaultState.textContent = formatVaultState(summary, (at) =>
+    new Date(at).toLocaleString(msg().locale),
+  );
 }
 
 async function loadSettings(): Promise<void> {
   try {
     const settings = (await send({ type: 'GET_SETTINGS' })) as Settings;
+    saved = settings;
     vaultEnabled.checked = settings.vaultEnabled;
     vaultRetention.value = String(settings.vaultRetentionDays);
+    languageSelect.value = settings.language;
+    applyPreference(settings.language);
+    redraw();
     await refreshVaultState();
   } catch (cause) {
-    say(`Réglages illisibles : ${reason(cause)}`, true);
+    say(msg().options.settingsUnreadable(reason(cause)), true);
+  }
+}
+
+/**
+ * Redessine tout ce que le dictionnaire touche : le balisage figé, et les
+ * fragments construits en JavaScript, que `applyStaticText` ne voit pas.
+ *
+ * `disarmVaultClear` d'abord : le bouton « Confirmer la suppression » porte une
+ * clé de traduction, donc réécrire le balisage lui rendrait son libellé neutre
+ * tout en le laissant armé — un clic de plus aurait alors effacé le coffre sans
+ * confirmation visible.
+ */
+function redraw(): void {
+  disarmVaultClear();
+  applyStaticText();
+  renderUnfilterableNote();
+  if (current !== null) {
+    renderCategories();
+    renderKeeplist();
+  }
+}
+
+languageSelect.addEventListener('change', () => {
+  void changeLanguage();
+});
+
+/**
+ * La langue s'applique avant d'être enregistrée : l'interface répond au clic
+ * sans attendre le service worker. Un refus d'enregistrement est annoncé — dans
+ * la langue choisie — et la page reprendra l'ancienne préférence au rechargement.
+ *
+ * Les réglages partent depuis `saved`, pas depuis le formulaire : une rétention
+ * en cours de saisie ne doit pas être validée par un changement de langue.
+ */
+async function changeLanguage(): Promise<void> {
+  const language = languageSelect.value as LanguagePreference;
+  applyPreference(language);
+  redraw();
+  const settings: Settings = { ...saved, language };
+  try {
+    await send({ type: 'SAVE_SETTINGS', settings });
+    saved = settings;
+    await refreshVaultState();
+  } catch (cause) {
+    say(msg().options.settingsRefused(reason(cause)), true);
   }
 }
 
@@ -318,17 +380,23 @@ onClick('#save-settings', async () => {
       settings: {
         vaultEnabled: vaultEnabled.checked,
         vaultRetentionDays: Number(vaultRetention.value),
+        language: languageSelect.value as LanguagePreference,
       },
     });
-    say('Réglages enregistrés.');
+    saved = {
+      vaultEnabled: vaultEnabled.checked,
+      vaultRetentionDays: Number(vaultRetention.value),
+      language: languageSelect.value as LanguagePreference,
+    };
+    say(msg().options.settingsSaved);
   } catch (cause) {
-    say(`Réglages refusés : ${cause instanceof Error ? cause.message : String(cause)}`, true);
+    say(msg().options.settingsRefused(reason(cause)), true);
   }
 });
 
 onClick('#vault-restore', async () => {
   if (vaultPassphrase.value === '') {
-    say('Phrase secrète requise pour restaurer.', true);
+    say(msg().options.restorePassphraseRequired, true);
     return;
   }
   try {
@@ -338,14 +406,13 @@ onClick('#vault-restore', async () => {
     })) as RestoreReport;
     say(formatRestoreReport(report), report.failures.length > 0);
   } catch (cause) {
-    say(`Restauration refusée : ${cause instanceof Error ? cause.message : String(cause)}`, true);
+    say(msg().options.restoreRefused(reason(cause)), true);
   } finally {
     vaultPassphrase.value = '';
   }
 });
 
 const vaultClear = document.querySelector<HTMLButtonElement>('#vault-clear')!;
-const VAULT_CLEAR_LABEL = vaultClear.textContent ?? 'Supprimer le coffre';
 
 /**
  * Supprimer le coffre est irréversible et ne demandait qu'un clic. Confirmation
@@ -356,7 +423,7 @@ let vaultClearArmed = false;
 
 function disarmVaultClear(): void {
   vaultClearArmed = false;
-  vaultClear.textContent = VAULT_CLEAR_LABEL;
+  vaultClear.textContent = msg().options.clearVault;
   vaultClear.classList.remove('danger');
 }
 
@@ -367,9 +434,9 @@ vaultClear.addEventListener('click', () => {
 async function clearVault(): Promise<void> {
   if (!vaultClearArmed) {
     vaultClearArmed = true;
-    vaultClear.textContent = 'Confirmer la suppression';
+    vaultClear.textContent = msg().options.confirmDelete;
     vaultClear.classList.add('danger');
-    say('Suppression définitive du coffre : cliquez à nouveau pour confirmer.', true);
+    say(msg().options.clearVaultArm, true);
     return;
   }
 
@@ -377,10 +444,10 @@ async function clearVault(): Promise<void> {
   try {
     await send({ type: 'VAULT_CLEAR' });
   } catch (cause) {
-    say(`Suppression du coffre refusée : ${reason(cause)}`, true);
+    say(msg().options.clearVaultRefused(reason(cause)), true);
     return;
   }
-  say('Coffre supprimé.');
+  say(msg().options.vaultCleared);
   await refreshVaultState();
 }
 

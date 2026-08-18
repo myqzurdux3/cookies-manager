@@ -142,3 +142,24 @@ domaine tiers est retéléchargé. C'est le comportement annoncé, pas un défau
 2. Lire `chrome.storage.local.get('runs')`.
 
 Attendu : le nettoyage figure en tête, le journal ne dépasse pas 20 entrées.
+
+## Scénario 14 — la langue bascule sans rien casser
+
+1. Options → carte « Langue » → choisir `English`.
+2. Vérifier que la page entière bascule : titres, boutons, colonnes de la
+   grille, note sur les catégories non filtrables, et l'invite de saisie du
+   champ « Add a site ».
+3. Ouvrir la popup et lancer un aperçu sur un profil qui nettoie les cookies.
+4. Vérifier que les notes de l'aperçu sont en anglais elles aussi — elles
+   viennent du service worker, pas de la page.
+5. Recharger la page d'options.
+
+Attendu : le choix a survécu au rechargement, et rien ne reste en français.
+
+## Scénario 15 — « Automatique » suit le navigateur
+
+1. Options → « Langue » → `Automatique (navigateur)`.
+2. Changer la langue d'affichage de Chrome, puis le redémarrer.
+
+Attendu : l'extension suit, sans qu'on ait rien réglé. Le nom et la description
+de l'extension dans `chrome://extensions` suivent également.

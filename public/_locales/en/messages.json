@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "Cookies Manager",
+    "description": "Name shown in the browser and on the Web Store."
+  },
+  "extensionDescription": {
+    "message": "Browsing data removal that keeps the sites you list.",
+    "description": "Short description shown next to the name."
+  }
+}

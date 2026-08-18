@@ -1,13 +1,7 @@
+import { msg } from '../i18n';
 import type { CategoryPlan } from '../core/planner';
 import type { Cleaner, CleanReport, Preview } from '../core/types';
 import type { BrowsingDataApi } from './storage';
-
-const NOTES = {
-  passwords:
-    "Les mots de passe enregistrés sont tout ou rien : aucune exclusion par site n'est possible. Suppression définitive.",
-  formData:
-    "Les données de formulaire sont tout ou rien : aucune exclusion par site n'est possible. Suppression définitive.",
-} as const;
 
 /**
  * Version de Chrome à partir de laquelle `browsingData.remove` ignore le type
@@ -17,10 +11,6 @@ const NOTES = {
  * annoncerait « vidé entièrement » après n'avoir rien vidé.
  */
 export const PASSWORDS_REMOVED_FROM = 144;
-
-const PASSWORDS_UNAVAILABLE =
-  'Chrome 144 et suivants ignorent la suppression des mots de passe par une extension : ' +
-  "rien n'a été supprimé. Passez par Chrome, Paramètres, Suppression des données de navigation.";
 
 /** Version majeure de Chrome, ou `null` si elle est illisible — on ne suppose alors rien. */
 export function chromeMajorVersion(userAgent: string): number | null {
@@ -46,7 +36,9 @@ export function createCredentialsCleaner(
       return {
         countable: false,
         items: 0,
-        note: unavailable ? PASSWORDS_UNAVAILABLE : NOTES[category],
+        note: unavailable
+          ? msg().notes.passwordsUnavailable(PASSWORDS_REMOVED_FROM)
+          : msg().notes[category],
       };
     },
 
@@ -54,7 +46,12 @@ export function createCredentialsCleaner(
       // On n'appelle pas l'API : elle résoudrait sans rien faire, et le rapport
       // annoncerait une suppression qui n'a pas eu lieu.
       if (unavailable) {
-        return { status: 'failed', deleted: 0, kept: 0, error: PASSWORDS_UNAVAILABLE };
+        return {
+          status: 'failed',
+          deleted: 0,
+          kept: 0,
+          error: msg().notes.passwordsUnavailable(PASSWORDS_REMOVED_FROM),
+        };
       }
 
       try {

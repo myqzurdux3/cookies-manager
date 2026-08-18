@@ -3,6 +3,8 @@ import { send } from '../../core/messages';
 import type { Settings } from '../../core/settings';
 import type { Category, Profile } from '../../core/types';
 import type { VaultSummary } from '../../core/vault';
+import { applyPreference, msg } from '../../i18n';
+import { applyStaticText } from '../static';
 import type { Row } from '../labels';
 import {
   formatRunSummary,
@@ -40,7 +42,12 @@ const sparedList = document.querySelector<HTMLUListElement>('#spared-list')!;
 const doneBtn = document.querySelector<HTMLButtonElement>('#done')!;
 
 let selected: Profile | null = null;
-let settings: Settings = { vaultEnabled: false, vaultRetentionDays: 7 };
+let settings: Settings = { vaultEnabled: false, vaultRetentionDays: 7, language: 'auto' };
+
+// La langue du navigateur avant même de parler au service worker : sans elle, la
+// popup s'afficherait un instant dans la langue de repli, puis basculerait.
+applyPreference('auto');
+applyStaticText();
 
 async function ensurePermissions(profile: Profile): Promise<boolean> {
   const needed = profile.categories
@@ -92,7 +99,7 @@ async function showPreview(profile: Profile): Promise<void> {
   reportEl.hidden = true;
 
   if (!(await ensurePermissions(profile))) {
-    renderMessage(previewList, "Permissions refusées : ce profil ne peut pas s'exécuter.");
+    renderMessage(previewList, msg().popup.permissionsDenied);
     previewEl.hidden = false;
     confirmBtn.disabled = true;
     return;
@@ -104,7 +111,7 @@ async function showPreview(profile: Profile): Promise<void> {
   } catch (cause) {
     // Sans ce filet, l'échec restait un rejet non capturé : la popup gardait
     // l'écran précédent et l'utilisateur n'apprenait jamais ce qui s'est passé.
-    renderMessage(previewList, `Aperçu impossible : ${reason(cause)}`);
+    renderMessage(previewList, msg().popup.previewFailed(reason(cause)));
     chooserEl.hidden = true;
     previewEl.hidden = false;
     confirmBtn.disabled = true;
@@ -138,7 +145,7 @@ async function annoncerRemplacementDuCoffre(): Promise<void> {
   try {
     const summary = (await send({ type: 'VAULT_DESCRIBE' })) as VaultSummary | null;
     const message = formatVaultReplacement(summary, (at) =>
-      new Date(at).toLocaleDateString('fr-FR'),
+      new Date(at).toLocaleDateString(msg().locale),
     );
     if (message === null) return;
     vaultExistingEl.textContent = message;
@@ -173,10 +180,7 @@ async function runClean(): Promise<void> {
 
   const needsPassphrase = !vaultEl.hidden;
   if (needsPassphrase && passphraseInput.value === '') {
-    renderMessage(
-      previewList,
-      "Phrase secrète requise : le coffre est actif, rien n'a été supprimé.",
-    );
+    renderMessage(previewList, msg().popup.passphraseRequired);
     return;
   }
 
@@ -193,7 +197,7 @@ async function runClean(): Promise<void> {
   } catch (cause) {
     // Le bouton vient d'être désactivé : sans réactivation, la popup est morte
     // jusqu'à sa fermeture, sans que rien n'explique pourquoi.
-    renderMessage(previewList, `Nettoyage impossible : ${reason(cause)}`);
+    renderMessage(previewList, msg().popup.cleanFailed(reason(cause)));
     confirmBtn.disabled = false;
     return;
   }
@@ -227,9 +231,13 @@ async function init(): Promise<void> {
   let profiles: Profile[];
   try {
     settings = (await send({ type: 'GET_SETTINGS' })) as Settings;
+    // Une préférence explicite l'emporte sur la langue du navigateur appliquée
+    // au chargement ; identique dans le cas « automatique », donc sans clignotement.
+    applyPreference(settings.language);
+    applyStaticText();
     profiles = (await send({ type: 'LIST_PROFILES' })) as Profile[];
   } catch (cause) {
-    renderMessage(previewList, `Service worker injoignable : ${reason(cause)}`);
+    renderMessage(previewList, msg().popup.workerUnreachable(reason(cause)));
     chooserEl.hidden = true;
     previewEl.hidden = false;
     confirmBtn.disabled = true;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createProfileStore, DEFAULT_PROFILES } from '../../src/core/profiles';
+import { createProfileStore, defaultProfiles } from '../../src/core/profiles';
 import type { StorageArea } from '../../src/core/profiles';
 import type { Profile } from '../../src/core/types';
 
@@ -107,7 +107,7 @@ describe('normalisation des motifs à l’enregistrement', () => {
 describe('createProfileStore', () => {
   it('rend les profils par défaut quand le stockage est vide', async () => {
     const store = createProfileStore(fakeArea());
-    expect(await store.list()).toEqual(DEFAULT_PROFILES);
+    expect(await store.list()).toEqual(defaultProfiles());
   });
 
   it('enregistre puis relit un profil', async () => {
@@ -149,7 +149,7 @@ describe('createProfileStore', () => {
     await expect(store.importJson(bad)).rejects.toThrow('motif vide');
   });
 
-  it('ne mutate pas DEFAULT_PROFILES quand le stockage est genuinely vide', async () => {
+  it('ne mutate pas les profils par défaut quand le stockage est genuinely vide', async () => {
     // First store saves a profile to genuinely empty storage (no "profiles" key)
     const store1 = createProfileStore(fakeArea());
     await store1.save(sample);
@@ -157,7 +157,7 @@ describe('createProfileStore', () => {
     // Second store over a second empty area should still get untouched defaults
     const store2 = createProfileStore(fakeArea());
     const defaults = await store2.list();
-    expect(defaults).toEqual(DEFAULT_PROFILES);
+    expect(defaults).toEqual(defaultProfiles());
     expect(defaults).toHaveLength(2);
     expect(defaults[0]!.id).toBe('light');
     expect(defaults[1]!.id).toBe('full');
@@ -197,9 +197,9 @@ describe('createProfileStore', () => {
   });
 });
 
-describe('DEFAULT_PROFILES', () => {
+describe('defaultProfiles()', () => {
   it("n'inclut jamais les mots de passe ni les formulaires", () => {
-    for (const profile of DEFAULT_PROFILES) {
+    for (const profile of defaultProfiles()) {
       expect(profile.categories).not.toContain('passwords');
       expect(profile.categories).not.toContain('formData');
     }

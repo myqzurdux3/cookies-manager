@@ -1,3 +1,4 @@
+import { msg } from '../../i18n';
 import type { Category, KeepRule } from '../../core/types';
 
 export const PER_SITE: Record<Category, 'exact' | 'origin' | 'none'> = {
@@ -20,34 +21,36 @@ export type Column = { key: string; label: string; categories: Category[]; hint?
  * Colonnes de la grille. Les quatre stockages web partagent une colonne : ils
  * relèvent tous de la même API, du même grain par origine, et personne ne
  * distingue `cacheStorage` de `serviceWorkers` au moment de protéger un site.
+ *
+ * Fonction et non constante : les libellés et les infobulles sont traduits, et
+ * la grille est redessinée à chaque changement de langue.
  */
-export const COLUMNS: Column[] = [
-  { key: 'cookies', label: 'Cookies', categories: ['cookies'] },
-  {
-    key: 'storage',
-    label: 'Stockage',
-    categories: ['localStorage', 'indexedDB', 'cacheStorage', 'serviceWorkers'],
-    hint: 'localStorage, IndexedDB, cache des applications et service workers',
-  },
-  {
-    key: 'httpCache',
-    label: 'Cache',
-    categories: ['httpCache'],
-    hint:
-      "Protection partielle : l'exclusion porte sur l'URL de la ressource, pas sur le site " +
-      'visité. Ce qu’un site protégé charge depuis un CDN tiers est tout de même vidé.',
-  },
-  { key: 'history', label: 'Historique', categories: ['history'] },
-  { key: 'downloads', label: 'Téléchargements', categories: ['downloads'] },
-  {
-    key: 'siteSettings',
-    label: 'Autorisations',
-    categories: ['siteSettings'],
-    hint:
-      'Portée limitée : une extension ne peut retirer que ses propres règles, jamais les ' +
-      'autorisations que vous avez accordées vous-même dans Chrome.',
-  },
-];
+export function columns(): Column[] {
+  const t = msg();
+  return [
+    { key: 'cookies', label: t.columns.cookies, categories: ['cookies'] },
+    {
+      key: 'storage',
+      label: t.columns.storage,
+      categories: ['localStorage', 'indexedDB', 'cacheStorage', 'serviceWorkers'],
+      hint: t.columnHints.storage,
+    },
+    {
+      key: 'httpCache',
+      label: t.columns.httpCache,
+      categories: ['httpCache'],
+      hint: t.columnHints.httpCache,
+    },
+    { key: 'history', label: t.columns.history, categories: ['history'] },
+    { key: 'downloads', label: t.columns.downloads, categories: ['downloads'] },
+    {
+      key: 'siteSettings',
+      label: t.columns.siteSettings,
+      categories: ['siteSettings'],
+      hint: t.columnHints.siteSettings,
+    },
+  ];
+}
 
 /** Catégories que l'API ne sait pas exclure par site : hors tableau, dans leur propre bloc. */
 export const UNFILTERABLE: Category[] = ['passwords', 'formData'];

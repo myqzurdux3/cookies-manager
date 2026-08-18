@@ -1,3 +1,4 @@
+import { msg } from '../i18n';
 import { normalizePattern } from './patterns';
 import { ALL_CATEGORIES } from './types';
 import type { Profile, Category } from './types';
@@ -15,31 +16,41 @@ export interface StorageArea {
 
 const KEY = 'profiles';
 
-export const DEFAULT_PROFILES: Profile[] = [
-  {
-    id: 'light',
-    name: 'Nettoyage léger',
-    since: 'day',
-    categories: ['cookies', 'httpCache'],
-    keepRules: [],
-  },
-  {
-    id: 'full',
-    name: 'Nettoyage complet',
-    since: 'all',
-    categories: [
-      'cookies',
-      'localStorage',
-      'indexedDB',
-      'cacheStorage',
-      'serviceWorkers',
-      'httpCache',
-      'history',
-      'downloads',
-    ],
-    keepRules: [],
-  },
-];
+/**
+ * Les profils livrés à la première ouverture. Fonction et non constante : leur
+ * nom est traduit, et la langue n'est connue qu'après lecture des réglages —
+ * une constante figerait le dictionnaire de repli au moment de l'import.
+ *
+ * Le nom est enregistré tel quel : changer de langue ensuite ne renomme pas un
+ * profil déjà créé, comme il ne renommerait pas un profil que vous avez nommé.
+ */
+export function defaultProfiles(): Profile[] {
+  return [
+    {
+      id: 'light',
+      name: msg().profiles.light,
+      since: 'day',
+      categories: ['cookies', 'httpCache'],
+      keepRules: [],
+    },
+    {
+      id: 'full',
+      name: msg().profiles.full,
+      since: 'all',
+      categories: [
+        'cookies',
+        'localStorage',
+        'indexedDB',
+        'cacheStorage',
+        'serviceWorkers',
+        'httpCache',
+        'history',
+        'downloads',
+      ],
+      keepRules: [],
+    },
+  ];
+}
 
 export interface ProfileStore {
   list(): Promise<Profile[]>;
@@ -59,45 +70,45 @@ export interface ProfileStore {
    @typescript-eslint/no-unsafe-call,
    @typescript-eslint/no-unsafe-assignment */
 function validate(value: unknown): Profile[] {
-  if (!Array.isArray(value)) throw new Error('format de profils invalide');
+  if (!Array.isArray(value)) throw new Error(msg().profiles.invalidFormat);
 
   const validSince = new Set<string>(['hour', 'day', 'week', 'month', 'all']);
   const validCategories = new Set(ALL_CATEGORIES);
 
   for (const profile of value) {
     if (typeof profile?.id !== 'string' || typeof profile?.name !== 'string') {
-      throw new Error('format de profils invalide');
+      throw new Error(msg().profiles.invalidFormat);
     }
     if (!Array.isArray(profile.categories) || !Array.isArray(profile.keepRules)) {
-      throw new Error('format de profils invalide');
+      throw new Error(msg().profiles.invalidFormat);
     }
 
     // Validate since
     if (typeof profile.since !== 'string' || !validSince.has(profile.since)) {
-      throw new Error('période invalide');
+      throw new Error(msg().profiles.invalidSince);
     }
 
     // Validate categories
     for (const category of profile.categories) {
       if (typeof category !== 'string' || !validCategories.has(category as Category)) {
-        throw new Error('catégorie inconnue');
+        throw new Error(msg().profiles.unknownCategory);
       }
     }
 
     // Validate keepRules
     for (const rule of profile.keepRules) {
       if (typeof rule?.pattern !== 'string' || rule.pattern.trim() === '') {
-        throw new Error('motif vide dans la keep-list');
+        throw new Error(msg().profiles.emptyPattern);
       }
 
       // Validate keep object
       const keep = rule.keep;
       if (keep === null || typeof keep !== 'object' || Array.isArray(keep)) {
-        throw new Error('règle de conservation invalide');
+        throw new Error(msg().profiles.invalidKeepRule);
       }
       for (const [key, val] of Object.entries(keep)) {
         if (!validCategories.has(key as Category) || val !== true) {
-          throw new Error('règle de conservation invalide');
+          throw new Error(msg().profiles.invalidKeepRule);
         }
       }
 
@@ -107,7 +118,7 @@ function validate(value: unknown): Profile[] {
           !Array.isArray(rule.keepCookies) ||
           !rule.keepCookies.every((item: unknown) => typeof item === 'string')
         ) {
-          throw new Error('liste de cookies invalide');
+          throw new Error(msg().profiles.invalidCookieList);
         }
       }
     }
@@ -129,7 +140,7 @@ function normalizeRules(profile: Profile): Profile {
     ...profile,
     keepRules: profile.keepRules.map((rule) => {
       const result = normalizePattern(rule.pattern);
-      if (!result.ok) throw new Error(`motif refusé « ${rule.pattern} » : ${result.reason}`);
+      if (!result.ok) throw new Error(msg().profiles.patternRefused(rule.pattern, result.reason));
       return { ...rule, pattern: result.pattern };
     }),
   };
@@ -156,7 +167,7 @@ export function createProfileStore(area: StorageArea): ProfileStore {
   async function read(): Promise<Profile[]> {
     const stored = await area.get(KEY);
     const value = stored[KEY];
-    if (value === undefined) return structuredClone(DEFAULT_PROFILES);
+    if (value === undefined) return defaultProfiles();
     return validate(value).map(repairRules);
   }
 

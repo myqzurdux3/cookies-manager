@@ -1,3 +1,4 @@
+import { msg } from '../i18n';
 /**
  * Normalisation des motifs de keep-list.
  *
@@ -56,15 +57,14 @@ export function normalizePattern(input: string): PatternResult {
   const body = pattern.startsWith('*.') ? pattern.slice(2) : pattern;
 
   if (body === '') return { ok: false, reason: 'motif sans domaine' };
-  if (body.includes('*'))
-    return { ok: false, reason: 'le wildcard doit être en tête, sous la forme *.exemple.com' };
-  if (INVALID_CHARS.test(body)) return { ok: false, reason: 'caractère interdit dans le motif' };
+  if (body.includes('*')) return { ok: false, reason: msg().patterns.wildcardLead };
+  if (INVALID_CHARS.test(body)) return { ok: false, reason: msg().patterns.forbiddenChar };
   if (body.startsWith('.') || body.endsWith('.') || body.includes('..')) {
-    return { ok: false, reason: 'point mal placé dans le motif' };
+    return { ok: false, reason: msg().patterns.misplacedDot };
   }
 
   const ascii = toPunycode(body);
-  if (ascii === null) return { ok: false, reason: 'nom de domaine impossible à interpréter' };
+  if (ascii === null) return { ok: false, reason: msg().patterns.unparseableHost };
 
   pattern = pattern.startsWith('*.') ? `*.${ascii}` : ascii;
   return { ok: true, pattern, changed: pattern !== original };

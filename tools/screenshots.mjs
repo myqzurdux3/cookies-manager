@@ -342,6 +342,9 @@ try {
        {url:'https://actualites.test/',   name:'consent',  value:'z'},
        {url:'https://forum.test/',        name:'sid',      value:'z'},
      ]) await chrome.cookies.set(c);
+     // Langue fixée : les captures du README sont en français, et le navigateur
+     // headless suivrait sinon la langue de la machine.
+     await chrome.storage.local.set({settings: {vaultEnabled: false, vaultRetentionDays: 7, language: 'fr'}});
      await chrome.storage.local.set({profiles: [
        {id:'leger', name:'Nettoyage léger', since:'day', categories:['cookies','httpCache'],
         keepRules:[{pattern:'*.exemple.test', keep:{cookies:true}}]},

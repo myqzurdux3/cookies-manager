@@ -13,18 +13,18 @@
 
     <main>
       <section id="chooser">
-        <h2 class="section-title">Profil de nettoyage</h2>
+        <h2 class="section-title" data-i18n="popup.chooserTitle">Profil de nettoyage</h2>
         <ul id="profiles"></ul>
       </section>
 
       <section id="preview" hidden>
-        <h2 class="section-title">Aperçu</h2>
+        <h2 class="section-title" data-i18n="popup.previewTitle">Aperçu</h2>
         <ul id="preview-list"></ul>
 
         <label id="vault" class="callout" hidden>
-          <span class="callout-title">Phrase secrète du coffre</span>
+          <span class="callout-title" data-i18n="popup.vaultTitle">Phrase secrète du coffre</span>
           <input type="password" id="passphrase" autocomplete="off" />
-          <span class="hint">
+          <span class="hint" data-i18n="popup.vaultHint">
             Les cookies supprimés seront sauvegardés chiffrés. Phrase oubliée = coffre
             définitivement illisible.
           </span>
@@ -34,38 +34,42 @@
         <label id="danger" class="callout danger" hidden>
           <span class="callout-row">
             <input type="checkbox" id="danger-check" />
-            <span class="callout-title">Suppression définitive</span>
+            <span class="callout-title" data-i18n="popup.dangerTitle">Suppression définitive</span>
           </span>
-          <span class="hint">
+          <span class="hint" data-i18n="popup.dangerHint">
             Ce profil efface des mots de passe ou des données de formulaire. Aucune exclusion par
             site n'est possible, et rien n'est récupérable.
           </span>
         </label>
 
         <div class="actions">
-          <button id="confirm" class="primary" type="button">Nettoyer</button>
-          <button id="cancel" type="button">Annuler</button>
+          <button id="confirm" class="primary" type="button" data-i18n="popup.clean">
+            Nettoyer
+          </button>
+          <button id="cancel" type="button" data-i18n="popup.cancel">Annuler</button>
         </div>
       </section>
 
       <section id="report" hidden>
-        <h2 class="section-title">Nettoyage terminé</h2>
+        <h2 class="section-title" data-i18n="popup.reportTitle">Nettoyage terminé</h2>
         <p id="report-summary" class="summary"></p>
         <ul id="report-list"></ul>
 
         <div id="spared" hidden>
-          <h3 class="section-title">Sites épargnés</h3>
+          <h3 class="section-title" data-i18n="popup.sparedTitle">Sites épargnés</h3>
           <ul id="spared-list" class="chips"></ul>
         </div>
 
         <div class="actions">
-          <button id="done" type="button">Retour aux profils</button>
+          <button id="done" type="button" data-i18n="popup.back">Retour aux profils</button>
         </div>
       </section>
     </main>
 
     <footer>
-      <a href="options.html" target="_blank">Configurer les profils et la keep-list</a>
+      <a href="options.html" target="_blank" data-i18n="popup.configure"
+        >Configurer les profils et la keep-list</a
+      >
     </footer>
 
     <script type="module" src="/src/ui/popup/popup.ts"></script>

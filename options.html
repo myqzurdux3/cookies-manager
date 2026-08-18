@@ -11,50 +11,54 @@
         <img class="brand-mark" src="icons/logo.svg" alt="" />
         <span class="brand-name">Cookies Manager</span>
       </div>
-      <p class="hint">Suppression des données de navigation, site par site.</p>
+      <p class="hint" data-i18n="options.tagline">
+        Suppression des données de navigation, site par site.
+      </p>
     </header>
 
     <main>
       <section class="card">
         <div class="card-head">
-          <h2>Profils</h2>
+          <h2 data-i18n="options.profilesTitle">Profils</h2>
           <div class="card-actions">
             <select id="profile-select"></select>
-            <button id="new-profile" type="button">Nouveau</button>
-            <button id="delete-profile" type="button">Supprimer</button>
+            <button id="new-profile" type="button" data-i18n="options.newProfile">Nouveau</button>
+            <button id="delete-profile" type="button" data-i18n="options.deleteProfile">
+              Supprimer
+            </button>
           </div>
         </div>
 
         <form id="editor">
           <div class="field-row">
             <label class="field">
-              <span class="field-label">Nom</span>
+              <span class="field-label" data-i18n="options.name">Nom</span>
               <input type="text" id="name" required />
             </label>
             <label class="field">
-              <span class="field-label">Période</span>
+              <span class="field-label" data-i18n="options.period">Période</span>
               <select id="since">
-                <option value="hour">Dernière heure</option>
-                <option value="day">Dernier jour</option>
-                <option value="week">Dernière semaine</option>
-                <option value="month">Dernier mois</option>
-                <option value="all">Tout</option>
+                <option value="hour" data-i18n="sinceOption.hour">Dernière heure</option>
+                <option value="day" data-i18n="sinceOption.day">Dernier jour</option>
+                <option value="week" data-i18n="sinceOption.week">Dernière semaine</option>
+                <option value="month" data-i18n="sinceOption.month">Dernier mois</option>
+                <option value="all" data-i18n="sinceOption.all">Tout</option>
               </select>
             </label>
           </div>
 
-          <h3>Catégories nettoyées</h3>
+          <h3 data-i18n="options.categoriesTitle">Catégories nettoyées</h3>
           <div id="categories" class="checks"></div>
 
-          <h3>Sites conservés</h3>
-          <p class="hint">
+          <h3 data-i18n="options.keepTitle">Sites conservés</h3>
+          <p class="hint" data-i18n-rich="options.patternsHelp">
             Motifs acceptés : <code>github.com</code> (hôte exact),
             <code>*.github.com</code> (sous-domaines et apex inclus), <code>*</code> (tous les
             sites). Une saisie mal formée comme <code>*google.com</code> est corrigée
             automatiquement.
           </p>
 
-          <p class="legend">
+          <p class="legend" data-i18n-rich="options.legend">
             <strong>Case cochée = donnée conservée</strong> pour ce site, elle survit au nettoyage.
             Case décochée = donnée supprimée. Une ligne dont aucune case n'est cochée ne protège
             rien.
@@ -65,15 +69,24 @@
           </div>
 
           <div class="adder">
-            <input type="text" id="new-pattern" placeholder="exemple.com ou *.exemple.com" />
-            <button id="add-pattern" type="button">Ajouter un site</button>
+            <input
+              type="text"
+              id="new-pattern"
+              placeholder="exemple.com ou *.exemple.com"
+              data-i18n-placeholder="options.patternPlaceholder"
+            />
+            <button id="add-pattern" type="button" data-i18n="options.addSite">
+              Ajouter un site
+            </button>
           </div>
 
           <p class="note" id="unfilterable"></p>
 
           <div class="actions">
-            <button type="submit" class="primary">Enregistrer le profil</button>
-            <span class="hint"
+            <button type="submit" class="primary" data-i18n="options.saveProfile">
+              Enregistrer le profil
+            </button>
+            <span class="hint" data-i18n="options.saveHint"
               >Les modifications ci-dessus ne s'appliquent qu'après enregistrement.</span
             >
           </div>
@@ -81,9 +94,25 @@
       </section>
 
       <section class="card">
-        <div class="card-head"><h2>Coffre de cookies</h2></div>
+        <div class="card-head"><h2 data-i18n="language.label">Langue</h2></div>
+        <div class="field-row">
+          <label class="field narrow">
+            <select id="language">
+              <option value="auto" data-i18n="language.auto">Automatique (navigateur)</option>
+              <option value="fr" data-i18n="language.fr">Français</option>
+              <option value="en" data-i18n="language.en">English</option>
+            </select>
+          </label>
+          <p class="hint" data-i18n="options.languageHint">
+            Le changement s'applique immédiatement, sans rien enregistrer d'autre.
+          </p>
+        </div>
+      </section>
 
-        <p class="warning">
+      <section class="card">
+        <div class="card-head"><h2 data-i18n="options.vaultTitle">Coffre de cookies</h2></div>
+
+        <p class="warning" data-i18n-rich="options.vaultWarning">
           Un coffre de cookies est un coffre de jetons de session actifs : déchiffré, il permet
           d'usurper vos sessions sans mot de passe ni second facteur. Il est chiffré par une phrase
           secrète que vous seul connaissez, et qui n'est jamais enregistrée —
@@ -94,40 +123,54 @@
         <div class="field-row">
           <label class="field check">
             <input type="checkbox" id="vault-enabled" />
-            <span>Sauvegarder les cookies avant suppression</span>
+            <span data-i18n="options.vaultEnabled">Sauvegarder les cookies avant suppression</span>
           </label>
           <label class="field narrow">
-            <span class="field-label">Rétention (jours)</span>
+            <span class="field-label" data-i18n="options.retention">Rétention (jours)</span>
             <input type="number" id="vault-retention" min="1" max="90" step="1" />
           </label>
         </div>
 
         <div class="actions">
-          <button id="save-settings" class="primary" type="button">Enregistrer les réglages</button>
+          <button id="save-settings" class="primary" type="button" data-i18n="options.saveSettings">
+            Enregistrer les réglages
+          </button>
         </div>
 
         <p id="vault-state" class="vault-state"></p>
 
         <div class="field-row">
           <label class="field">
-            <span class="field-label">Phrase secrète</span>
+            <span class="field-label" data-i18n="options.passphrase">Phrase secrète</span>
             <input type="password" id="vault-passphrase" autocomplete="off" />
           </label>
           <div class="field buttons">
-            <button id="vault-restore" type="button">Restaurer les cookies</button>
-            <button id="vault-clear" type="button">Supprimer le coffre</button>
+            <button id="vault-restore" type="button" data-i18n="options.restore">
+              Restaurer les cookies
+            </button>
+            <button id="vault-clear" type="button" data-i18n="options.clearVault">
+              Supprimer le coffre
+            </button>
           </div>
         </div>
       </section>
 
       <section class="card">
-        <div class="card-head"><h2>Sauvegarde de la configuration</h2></div>
-        <p class="hint">Exporte et importe les profils, pas les données de navigation.</p>
-        <div class="actions">
-          <button id="export" type="button">Exporter en JSON</button>
-          <button id="import" type="button">Importer</button>
+        <div class="card-head">
+          <h2 data-i18n="options.backupTitle">Sauvegarde de la configuration</h2>
         </div>
-        <textarea id="import-area" placeholder="Coller un JSON de profils ici"></textarea>
+        <p class="hint" data-i18n="options.backupHint">
+          Exporte et importe les profils, pas les données de navigation.
+        </p>
+        <div class="actions">
+          <button id="export" type="button" data-i18n="options.export">Exporter en JSON</button>
+          <button id="import" type="button" data-i18n="options.import">Importer</button>
+        </div>
+        <textarea
+          id="import-area"
+          placeholder="Coller un JSON de profils ici"
+          data-i18n-placeholder="options.importPlaceholder"
+        ></textarea>
       </section>
     </main>
 

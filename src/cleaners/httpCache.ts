@@ -1,9 +1,8 @@
+import { msg } from '../i18n';
 import type { CategoryPlan } from '../core/planner';
 import type { Cleaner, CleanReport, Preview } from '../core/types';
 import { protectedOrigins } from './storage';
 import type { BrowsingDataApi, OriginSource } from './storage';
-
-const NOTE = 'Le cache HTTP est vidé en bloc pour tous les sites non protégés.';
 
 /**
  * L'API accepte `excludeOrigins` pour le cache depuis Chrome 74 — contrairement
@@ -14,10 +13,6 @@ const NOTE = 'Le cache HTTP est vidé en bloc pour tous les sites non protégés
  *
  * La protection est donc partielle, et le dire fait partie de la protection.
  */
-const PARTIAL_NOTE =
-  "L'exclusion porte sur l'URL de la ressource, pas sur le site visité : ce qu'un site protégé " +
-  'charge depuis un domaine tiers (CDN, polices, scripts) est tout de même vidé. La borne de ' +
-  "temps porte sur la dernière utilisation d'une entrée, pas sur sa création.";
 
 export function createHttpCacheCleaner(api: BrowsingDataApi, knownHosts: OriginSource): Cleaner {
   return {
@@ -29,7 +24,10 @@ export function createHttpCacheCleaner(api: BrowsingDataApi, knownHosts: OriginS
       return {
         countable: false,
         items: 0,
-        note: origins.length === 0 ? NOTE : `${NOTE} ${PARTIAL_NOTE}`,
+        note:
+          origins.length === 0
+            ? msg().notes.httpCacheBlock
+            : `${msg().notes.httpCacheBlock} ${msg().notes.httpCachePartial}`,
       };
     },
 

@@ -1,3 +1,4 @@
+import { msg } from '../i18n';
 import { matchesPattern } from '../core/matcher';
 import type { CategoryPlan } from '../core/planner';
 import type { Cleaner, CleanReport, Preview } from '../core/types';
@@ -14,9 +15,6 @@ export type BrowsingDataApi = {
 export type OriginSource = () => Promise<string[]>;
 
 export type StorageCategory = 'localStorage' | 'indexedDB' | 'cacheStorage' | 'serviceWorkers';
-
-const PARTIAL_NOTE =
-  "Liste des origines dérivée des cookies et de l'historique : c'est un minorant, la liste n'est pas exhaustive.";
 
 export async function protectedOrigins(
   plan: CategoryPlan,
@@ -56,7 +54,7 @@ export function createStorageCleaner(
       return {
         countable: false,
         items: 0,
-        note: `${hosts.size} origine(s) protégée(s). ${PARTIAL_NOTE}`,
+        note: msg().notes.storageOrigins(hosts.size),
       };
     },
 

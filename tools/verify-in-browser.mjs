@@ -4,7 +4,7 @@
  *
  * La suite de tests n'ouvre aucun navigateur : elle parle à de faux objets
  * `chrome.*`. Ce script fait l'inverse — il charge `dist/` dans une instance
- * jetable de Chrome ou Brave et exerce le vrai chemin des messages, jusqu'à la
+ * jetable de Chrome et exerce le vrai chemin des messages, jusqu'à la
  * sauvegarde et la restauration du coffre.
  *
  * Il ne remplace pas docs/recette-manuelle.md : rien de visuel n'est vérifié.
@@ -249,7 +249,7 @@ if (!browser) {
 }
 
 /**
- * Le port doit être libre : `brave-browser` et `google-chrome` sont des
+ * Le port doit être libre : les binaires Chromium installés sur la machine sont des
  * enveloppes shell, et tuer le processus lancé ne tue pas toujours le
  * navigateur. Se raccrocher à une instance survivante ferait tourner la
  * vérification sur un profil déjà sale — et rendrait le résultat faux.
@@ -406,8 +406,29 @@ try {
     restants,
   );
 
+  // --- La langue traverse-t-elle vraiment le service worker ? ---
+  // Les notes d'aperçu naissent dans le worker, pas dans la page : un réglage
+  // ignoré là donnerait une interface anglaise avec des notes françaises.
+  const reglages = { vaultEnabled: true, vaultRetentionDays: 7, language: 'en' };
+  const enregistres = await send({ type: 'SAVE_SETTINGS', settings: reglages });
+  check('les réglages sont acceptés', enregistres.ok === true, enregistres.error ?? 'ok');
+
+  const anglais = await send({ type: 'PREVIEW', profileId: 'verif' });
+  check(
+    'les notes suivent la langue enregistrée',
+    anglais.data?.[0]?.preview?.note?.includes('Partitioned cookies') === true,
+    anglais.data?.[0]?.preview?.note ?? anglais.error,
+  );
+
+  await send({ type: 'SAVE_SETTINGS', settings: { ...reglages, language: 'fr' } });
+  const francais = await send({ type: 'PREVIEW', profileId: 'verif' });
+  check(
+    'et rebasculent sans redémarrer le worker',
+    francais.data?.[0]?.preview?.note?.includes('cloisonnés par site') === true,
+    francais.data?.[0]?.preview?.note ?? francais.error,
+  );
+
   // --- Le coffre : sauvegarde puis restauration ---
-  await send({ type: 'SAVE_SETTINGS', settings: { vaultEnabled: true, vaultRetentionDays: 7 } });
   await send({
     type: 'SAVE_PROFILE',
     profile: {

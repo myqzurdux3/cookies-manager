@@ -1,3 +1,4 @@
+import { msg } from '../i18n';
 import type { CategoryPlan, Plan } from './planner';
 import type { StorageArea } from './profiles';
 import type { Category, CleanReport, Cleaner, Preview } from './types';
@@ -31,7 +32,7 @@ function missing(category: Category): CleanReport {
     status: 'failed',
     deleted: 0,
     kept: 0,
-    error: `aucun cleaner disponible pour ${category}`,
+    error: msg().errors.noCleaner(category),
   };
 }
 
@@ -102,7 +103,7 @@ export function createEngine(
                 status: 'failed',
                 deleted: 0,
                 kept: 0,
-                error: `sauvegarde impossible, cookies conservés : ${reason}`,
+                error: msg().errors.vaultFailed(reason),
               },
             });
             continue;

@@ -1,3 +1,5 @@
+import { msg } from '../i18n';
+import type { LanguagePreference } from '../i18n';
 import type { StorageArea } from './profiles';
 import { DEFAULT_RETENTION_DAYS } from './vault';
 
@@ -8,12 +10,20 @@ export const MAX_RETENTION_DAYS = 90;
 export type Settings = {
   vaultEnabled: boolean;
   vaultRetentionDays: number;
+  language: LanguagePreference;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
   vaultEnabled: false,
   vaultRetentionDays: DEFAULT_RETENTION_DAYS,
+  language: 'auto',
 };
+
+const LANGUAGE_PREFERENCES = new Set<string>(['auto', 'fr', 'en']);
+
+function isValidLanguage(value: unknown): value is LanguagePreference {
+  return typeof value === 'string' && LANGUAGE_PREFERENCES.has(value);
+}
 
 export interface SettingsStore {
   get(): Promise<Settings>;
@@ -28,7 +38,10 @@ function isValidRetention(days: unknown): days is number {
 
 function validate(settings: Settings): void {
   if (!isValidRetention(settings.vaultRetentionDays)) {
-    throw new Error(`rétention invalide : attendu un entier de 1 à ${MAX_RETENTION_DAYS} jours`);
+    throw new Error(msg().errors.invalidRetention(MAX_RETENTION_DAYS));
+  }
+  if (!isValidLanguage(settings.language)) {
+    throw new Error(msg().errors.invalidLanguage([...LANGUAGE_PREFERENCES].join(', ')));
   }
 }
 
@@ -51,6 +64,10 @@ export function createSettingsStore(area: StorageArea): SettingsStore {
         vaultRetentionDays: isValidRetention(partial.vaultRetentionDays)
           ? partial.vaultRetentionDays
           : DEFAULT_SETTINGS.vaultRetentionDays,
+        // Une langue inconnue — réglage écrit à la main, ou version antérieure
+        // sans ce champ — retombe sur « suivre le navigateur » plutôt que de
+        // rendre l'interface vide.
+        language: isValidLanguage(partial.language) ? partial.language : DEFAULT_SETTINGS.language,
       };
     },
 

@@ -1,3 +1,4 @@
+import { applyPreference, msg } from './i18n';
 import { createEngine } from './core/engine';
 import type { Engine } from './core/engine';
 import type { Message, Response } from './core/messages';
@@ -57,7 +58,7 @@ function engineFor(passphrase: string | null): Engine {
       const settings = await settingsStore.get();
       if (!settings.vaultEnabled) return;
       if (passphrase === null) {
-        throw new Error('phrase secrète absente alors que le coffre est actif');
+        throw new Error(msg().errors.passphraseMissing);
       }
       await backupCookies(categoryPlan, passphrase);
     },
@@ -112,8 +113,20 @@ const handle = createRouter({
   now: () => Date.now(),
 });
 
+/**
+ * La langue est relue à chaque message plutôt que retenue : le service worker
+ * est suspendu dès qu'il est inactif, et l'utilisateur a pu changer de langue
+ * entre deux réveils. Les notes d'aperçu et les messages d'erreur naissent ici,
+ * pas dans la page — sans cela, une interface en anglais afficherait des notes
+ * en français.
+ */
+async function handleInLanguage(message: Message): Promise<unknown> {
+  applyPreference((await settingsStore.get()).language);
+  return handle(message);
+}
+
 chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) => {
-  handle(message)
+  handleInLanguage(message)
     .then((data) => sendResponse({ ok: true, data } satisfies Response))
     .catch((cause: unknown) =>
       sendResponse({

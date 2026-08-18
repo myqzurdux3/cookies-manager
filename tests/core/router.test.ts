@@ -16,7 +16,7 @@ const PROFILE: Profile = {
 function fakeDeps(overrides: Partial<RouterDeps> = {}) {
   const passphrases: (string | null)[] = [];
   const purges: { now: number; days: number }[] = [];
-  const settings: Settings = { vaultEnabled: true, vaultRetentionDays: 7 };
+  const settings: Settings = { vaultEnabled: true, vaultRetentionDays: 7, language: 'auto' };
 
   const engine: Engine = {
     async preview() {
@@ -158,7 +158,7 @@ describe('createRouter', () => {
     await handle({ type: 'GET_SETTINGS' });
     await handle({
       type: 'SAVE_SETTINGS',
-      settings: { vaultEnabled: false, vaultRetentionDays: 7 },
+      settings: { vaultEnabled: false, vaultRetentionDays: 7, language: 'auto' },
     });
     await handle({ type: 'VAULT_DESCRIBE' });
     await handle({ type: 'VAULT_CLEAR' });
@@ -171,7 +171,7 @@ describe('createRouter', () => {
       'exportJson()',
       'importJson("[]")',
       'getSettings()',
-      'saveSettings({"vaultEnabled":false,"vaultRetentionDays":7})',
+      'saveSettings({"vaultEnabled":false,"vaultRetentionDays":7,"language":"auto"})',
       'describe()',
       'clear()',
       'restore("phrase")',

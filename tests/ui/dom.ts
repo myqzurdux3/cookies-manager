@@ -18,7 +18,7 @@ export type Reply = { ok: true; data: unknown } | { ok: false; error: string };
  * Faux `chrome` minimal : la popup et la page d'options ne parlent au service
  * worker que par messages, et ne touchent qu'à `permissions.request`.
  */
-export function stubChrome(reply: (type: string) => Reply) {
+export function stubChrome(reply: (type: string) => Reply, uiLanguage = 'fr-FR') {
   const sent: { type: string; [key: string]: unknown }[] = [];
   const permissionRequests: unknown[] = [];
   let grantPermissions = true;
@@ -29,6 +29,11 @@ export function stubChrome(reply: (type: string) => Reply) {
         sent.push(message);
         return reply(message.type);
       },
+    },
+    i18n: {
+      // La langue d'interface décide de l'affichage quand la préférence est
+      // « automatique » : la fixer rend les assertions reproductibles.
+      getUILanguage: () => uiLanguage,
     },
     permissions: {
       async request(details: unknown) {

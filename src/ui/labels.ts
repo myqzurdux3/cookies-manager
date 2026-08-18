@@ -2,28 +2,15 @@ import type { CategoryResult, PreviewResult } from '../core/engine';
 import type { RestoreReport } from '../core/restore';
 import type { VaultSummary } from '../core/vault';
 import type { Category, Profile, Since } from '../core/types';
+import { msg } from '../i18n';
 
-export const CATEGORY_LABELS: Record<Category, string> = {
-  cookies: 'Cookies',
-  localStorage: 'Stockage local',
-  indexedDB: 'IndexedDB',
-  cacheStorage: 'Cache des applications',
-  serviceWorkers: 'Service workers',
-  httpCache: 'Cache HTTP',
-  history: 'Historique',
-  downloads: 'Liste des téléchargements',
-  formData: 'Données de formulaire',
-  passwords: 'Mots de passe',
-  siteSettings: 'Autorisations de site',
-};
+export function categoryLabel(category: Category): string {
+  return msg().categories[category];
+}
 
-export const SINCE_LABELS: Record<Since, string> = {
-  hour: 'dernière heure',
-  day: 'dernier jour',
-  week: 'dernière semaine',
-  month: 'dernier mois',
-  all: 'tout',
-};
+export function sinceLabel(since: Since): string {
+  return msg().since[since];
+}
 
 /** Une ligne de l'interface : libellé à gauche, valeur à droite, note en dessous. */
 export type Row = {
@@ -34,35 +21,41 @@ export type Row = {
 };
 
 export function previewRow(result: PreviewResult): Row {
-  const label = CATEGORY_LABELS[result.category];
+  const label = categoryLabel(result.category);
   const { countable, items, note } = result.preview;
   if (countable) {
     return {
       label,
-      value: `${items} à supprimer`,
+      value: msg().row.toDelete(items),
       note,
       tone: items > 0 ? 'strong' : 'muted',
     };
   }
-  return { label, value: 'non chiffrable', note, tone: 'muted' };
+  return { label, value: msg().row.notCountable, note, tone: 'muted' };
 }
 
 export function reportRow(result: CategoryResult): Row {
-  const label = CATEGORY_LABELS[result.category];
+  const label = categoryLabel(result.category);
   const { status, deleted, kept, error, countable } = result.report;
+  const t = msg();
 
   if (status === 'failed') {
-    return { label, value: 'échec', note: error ?? 'raison inconnue', tone: 'failed' };
+    return { label, value: t.row.failed, note: error ?? t.row.unknownReason, tone: 'failed' };
   }
 
   // Sans décompte possible, « 0 supprimé » se lirait « rien n'a bougé ».
   if (countable === false) {
-    return { label, value: 'vidé entièrement', tone: 'strong' };
+    return { label, value: t.row.wipedFully, tone: 'strong' };
   }
 
-  const value = `${deleted} supprimé(s) · ${kept} conservé(s)`;
+  const value = t.row.deletedKept(deleted, kept);
   if (status === 'partial') {
-    return { label, value, note: `échec partiel : ${error ?? 'raison inconnue'}`, tone: 'failed' };
+    return {
+      label,
+      value,
+      note: t.row.partialFailure(error ?? t.row.unknownReason),
+      tone: 'failed',
+    };
   }
   return { label, value, tone: 'strong' };
 }
@@ -81,23 +74,11 @@ export function runSummary(results: CategoryResult[]): RunSummary {
   );
 }
 
-function plural(count: number, one: string, many: string): string {
-  return `${count} ${count > 1 ? many : one}`;
-}
-
 export function formatRunSummary(summary: RunSummary): string {
-  const parts = [
-    plural(summary.deleted, 'élément supprimé', 'éléments supprimés'),
-    plural(summary.kept, 'conservé', 'conservés'),
-  ];
-  if (summary.wiped > 0) {
-    parts.push(
-      plural(summary.wiped, 'catégorie vidée entièrement', 'catégories vidées entièrement'),
-    );
-  }
-  if (summary.failed > 0) {
-    parts.push(plural(summary.failed, 'catégorie en échec', 'catégories en échec'));
-  }
+  const t = msg().summary;
+  const parts = [t.deleted(summary.deleted), t.kept(summary.kept)];
+  if (summary.wiped > 0) parts.push(t.wiped(summary.wiped));
+  if (summary.failed > 0) parts.push(t.failed(summary.failed));
   return parts.join(' · ');
 }
 
@@ -109,8 +90,7 @@ export function protectedSites(profile: Pick<Profile, 'keepRules'>): string[] {
 }
 
 export function profileMeta(profile: Pick<Profile, 'since' | 'categories'>): string {
-  const count = profile.categories.length;
-  return `${SINCE_LABELS[profile.since]} · ${count} catégorie${count > 1 ? 's' : ''}`;
+  return msg().profileMeta(sinceLabel(profile.since), profile.categories.length);
 }
 
 export function needsExtraConfirmation(categories: Category[]): boolean {
@@ -118,12 +98,13 @@ export function needsExtraConfirmation(categories: Category[]): boolean {
 }
 
 export function formatRestoreReport(report: RestoreReport): string {
-  const base = `${report.restored} cookie(s) restauré(s).`;
-  if (report.failures.length === 0) return `${base} Vos sessions sont de nouveau actives.`;
+  const t = msg().restore;
+  const base = t.restored(report.restored);
+  if (report.failures.length === 0) return `${base} ${t.allBack}`;
   const details = report.failures
-    .map((failure) => `${failure.name} (${failure.domain}) : ${failure.error}`)
+    .map((failure) => t.failureDetail(failure.name, failure.domain, failure.error))
     .join(' | ');
-  return `${base} ${report.failures.length} refusé(s) par le navigateur — ${details}`;
+  return `${base} ${t.refused(report.failures.length, details)}`;
 }
 
 /**
@@ -139,11 +120,7 @@ export function formatVaultReplacement(
   formatDate: (at: number) => string,
 ): string | null {
   if (summary === null) return null;
-  const cookies = summary.cookieCount > 1 ? 'cookies' : 'cookie';
-  return (
-    `Un coffre du ${formatDate(summary.createdAt)} existe déjà ` +
-    `(${summary.cookieCount} ${cookies}) et sera remplacé : restaurez-le d'abord si vous en avez besoin.`
-  );
+  return msg().vault.replacement(formatDate(summary.createdAt), summary.cookieCount);
 }
 
 /**
@@ -154,7 +131,10 @@ export function formatVaultState(
   summary: VaultSummary | null,
   formatDate: (at: number) => string,
 ): string {
-  if (summary === null) return 'Aucun coffre enregistré.';
-  const domains = summary.domains.length;
-  return `Coffre du ${formatDate(summary.createdAt)} : ${summary.cookieCount} cookie(s) sur ${domains} domaine(s).`;
+  if (summary === null) return msg().vault.none;
+  return msg().vault.state(
+    formatDate(summary.createdAt),
+    summary.cookieCount,
+    summary.domains.length,
+  );
 }
