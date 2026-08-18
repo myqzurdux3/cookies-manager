@@ -156,6 +156,31 @@ async function attendrePret(client, timeoutMs = 30000, extensionId = null) {
   );
 }
 
+/**
+ * Charge l'extension par le protocole DevTools si `--load-extension` n'a rien
+ * donné. Chrome 137 a désactivé ce commutateur, et les indicateurs de
+ * contournement ne survivent pas à toutes les versions ; `Extensions.loadUnpacked`
+ * est le chemin resté supporté. Rend `true` si l'extension est chargée.
+ */
+async function chargerExtension(chemin) {
+  const version = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json();
+  const navigateur = await cdp(version.webSocketDebuggerUrl);
+  try {
+    await navigateur.send('Extensions.loadUnpacked', { path: chemin });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    navigateur.close();
+  }
+}
+
+/** Une cible de l'extension attendue est-elle visible ? */
+async function extensionVisible(extensionId) {
+  const cibles = await targets().catch(() => []);
+  return cibles.some((t) => t.url.startsWith(`chrome-extension://${extensionId}/`));
+}
+
 async function evaluate(client, expression) {
   const r = await client.send('Runtime.evaluate', {
     expression: `(async () => { ${expression} })()`,
@@ -258,7 +283,21 @@ try {
   // On travaille uniquement depuis une page de l'extension. Une page a le même
   // accès aux API qu'un service worker, et elle ne se suspend pas : s'attacher
   // à un worker le laisse parfois figé, et son contexte n'expose alors rien.
-  const extensionId = extensionIdDepuis(DIST.replace(/\/$/, ''));
+  const chemin = DIST.replace(/\/$/, '');
+  const extensionId = extensionIdDepuis(chemin);
+
+  // `--load-extension` peut être ignoré sans le dire : on vérifie, et on
+  // retombe sur le chargement par le protocole DevTools.
+  if (!(await extensionVisible(extensionId))) {
+    const charge = await chargerExtension(chemin);
+    for (let i = 0; i < 20 && !(await extensionVisible(extensionId)); i += 1) await sleep(400);
+    if (!(await extensionVisible(extensionId))) {
+      throw new Error(
+        `l'extension ne s'est pas chargée (Extensions.loadUnpacked ${charge ? 'accepté' : 'refusé'}). ` +
+          `Chrome 137 et suivants refusent --load-extension. Sortie du navigateur : ${dernieresLignes()}`,
+      );
+    }
+  }
   console.log(`Navigateur : ${browser}\nExtension  : ${extensionId}\n`);
 
   await fetch(`http://127.0.0.1:${PORT}/json/new?chrome-extension://${extensionId}/options.html`, {

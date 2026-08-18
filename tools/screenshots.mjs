@@ -126,6 +126,31 @@ async function attendrePret(client, timeoutMs = 30000) {
   throw new Error(`les API de l'extension ne sont pas devenues disponibles : ${derniereErreur}`);
 }
 
+/**
+ * Charge l'extension par le protocole DevTools si `--load-extension` n'a rien
+ * donné. Chrome 137 a désactivé ce commutateur, et les indicateurs de
+ * contournement ne survivent pas à toutes les versions ; `Extensions.loadUnpacked`
+ * est le chemin resté supporté. Rend `true` si l'extension est chargée.
+ */
+async function chargerExtension(chemin) {
+  const version = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json();
+  const navigateur = await cdp(version.webSocketDebuggerUrl);
+  try {
+    await navigateur.send('Extensions.loadUnpacked', { path: chemin });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    navigateur.close();
+  }
+}
+
+/** Une cible de l'extension attendue est-elle visible ? */
+async function extensionVisible(extensionId) {
+  const cibles = await targets().catch(() => []);
+  return cibles.some((t) => t.url.startsWith(`chrome-extension://${extensionId}/`));
+}
+
 async function evaluate(client, expression) {
   const r = await client.send('Runtime.evaluate', {
     expression: `(async () => { ${expression} })()`,
@@ -236,7 +261,12 @@ try {
   }
   // Travailler depuis une page de l'extension plutôt que depuis son service
   // worker : même accès aux API, et pas de suspension possible.
-  const extensionId = extensionIdDepuis(DIST.replace(/\/$/, ''));
+  const chemin = DIST.replace(/\/$/, '');
+  const extensionId = extensionIdDepuis(chemin);
+  if (!(await extensionVisible(extensionId))) {
+    await chargerExtension(chemin);
+    for (let i = 0; i < 20 && !(await extensionVisible(extensionId)); i += 1) await sleep(400);
+  }
   await fetch(`http://127.0.0.1:${PORT}/json/new?chrome-extension://${extensionId}/options.html`, {
     method: 'PUT',
   });
