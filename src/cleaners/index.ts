@@ -41,6 +41,32 @@ export async function collectKnownHosts(api: ChromeLike): Promise<string[]> {
   return [...hosts];
 }
 
+/**
+ * Mémoïse `collectKnownHosts` pour une exécution.
+ *
+ * `protectedOrigins` appelle cette source une fois par règle à wildcard, et
+ * `engine.preview` lance les quatre cleaners de stockage en parallèle : sans
+ * mémoïsation, un profil complet avec trois règles à wildcard déclenchait douze
+ * `cookies.getAll` et douze `history.search` concurrents pour le même résultat.
+ *
+ * Un échec n'est pas mémorisé : le service worker peut être réveillé avant que
+ * les API soient prêtes, et le prochain appel doit pouvoir réussir.
+ *
+ * La durée de vie voulue est celle d'un message, pas celle du service worker —
+ * `background.ts` en crée donc une par message, pour ne jamais raisonner sur une
+ * liste d'hôtes périmée.
+ */
+export function cachedKnownHosts(api: ChromeLike): OriginSource {
+  let pending: Promise<string[]> | undefined;
+  return () => {
+    pending ??= collectKnownHosts(api).catch((cause: unknown) => {
+      pending = undefined;
+      throw cause;
+    });
+    return pending;
+  };
+}
+
 export function buildCleaners(api: ChromeLike, knownHosts: OriginSource): Cleaner[] {
   return [
     createCookiesCleaner(api),

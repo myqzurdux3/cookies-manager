@@ -8,7 +8,7 @@ import { createVault } from './core/vault';
 import type { StoredCookie } from './core/vault';
 import { restoreDetails } from './core/restore';
 import type { RestoreFailure, RestoreReport } from './core/restore';
-import { buildCleaners, collectKnownHosts } from './cleaners/index';
+import { buildCleaners, cachedKnownHosts } from './cleaners/index';
 import type { ChromeLike } from './cleaners/index';
 import { deletableCookies } from './cleaners/cookies';
 
@@ -45,13 +45,21 @@ async function backupCookies(categoryPlan: CategoryPlan): Promise<void> {
   await vault.store(condemned, pendingPassphrase, Date.now());
 }
 
-const engine = createEngine(buildCleaners(api, () => collectKnownHosts(api)), area, {
-  backup: async (categoryPlan) => {
-    const settings = await settingsStore.get();
-    if (!settings.vaultEnabled) return;
-    await backupCookies(categoryPlan);
-  },
-});
+/**
+ * Un moteur neuf par message : la liste des hôtes connus est mémoïsée pour la
+ * durée d'une exécution et pas au-delà. Partager un moteur entre messages ferait
+ * raisonner un nettoyage sur une liste d'hôtes collectée bien plus tôt.
+ * Construire les onze cleaners ne coûte que onze objets littéraux.
+ */
+function createRunEngine() {
+  return createEngine(buildCleaners(api, cachedKnownHosts(api)), area, {
+    backup: async (categoryPlan) => {
+      const settings = await settingsStore.get();
+      if (!settings.vaultEnabled) return;
+      await backupCookies(categoryPlan);
+    },
+  });
+}
 
 async function profileById(id: string) {
   const profile = (await store.list()).find((candidate) => candidate.id === id);
@@ -93,20 +101,20 @@ async function handle(message: Message): Promise<unknown> {
     case 'DELETE_PROFILE':
       return store.remove(message.id);
     case 'PREVIEW':
-      return engine.preview(buildPlan(await profileById(message.profileId), Date.now()));
+      return createRunEngine().preview(buildPlan(await profileById(message.profileId), Date.now()));
     case 'CLEAN': {
       const now = Date.now();
       const settings = await settingsStore.get();
       await vault.purgeExpired(now, settings.vaultRetentionDays);
       pendingPassphrase = message.passphrase ?? null;
       try {
-        return await engine.clean(buildPlan(await profileById(message.profileId), now), now);
+        return await createRunEngine().clean(buildPlan(await profileById(message.profileId), now), now);
       } finally {
         pendingPassphrase = null;
       }
     }
     case 'JOURNAL':
-      return engine.journal();
+      return createRunEngine().journal();
     case 'EXPORT':
       return store.exportJson();
     case 'IMPORT':
