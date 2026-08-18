@@ -1,8 +1,9 @@
 import { createEngine } from './core/engine';
+import type { Engine } from './core/engine';
 import type { Message, Response } from './core/messages';
-import { buildPlan } from './core/planner';
 import type { CategoryPlan } from './core/planner';
 import { createProfileStore } from './core/profiles';
+import { createRouter } from './core/router';
 import { createSettingsStore } from './core/settings';
 import { createVault } from './core/vault';
 import type { StoredCookie } from './core/vault';
@@ -20,16 +21,7 @@ const settingsStore = createSettingsStore(area);
 const vault = createVault(crypto, area);
 const chromeMajor = chromeMajorVersion(navigator.userAgent);
 
-/**
- * La phrase secrète ne vit que le temps d'une purge : elle arrive par message
- * depuis la popup, sert à dériver la clé, et n'est jamais persistée.
- */
-let pendingPassphrase: string | null = null;
-
-async function backupCookies(categoryPlan: CategoryPlan): Promise<void> {
-  if (pendingPassphrase === null) {
-    throw new Error('phrase secrète absente alors que le coffre est actif');
-  }
+async function backupCookies(categoryPlan: CategoryPlan, passphrase: string): Promise<void> {
   const cookies = await api.cookies.getAll({});
   const condemned: StoredCookie[] = deletableCookies(cookies, categoryPlan).map((cookie) => ({
     name: cookie.name,
@@ -44,29 +36,32 @@ async function backupCookies(categoryPlan: CategoryPlan): Promise<void> {
     session: cookie.session,
     expirationDate: cookie.expirationDate,
   }));
-  await vault.store(condemned, pendingPassphrase, Date.now());
+  await vault.store(condemned, passphrase, Date.now());
 }
 
 /**
- * Un moteur neuf par message : la liste des hôtes connus est mémoïsée pour la
- * durée d'une exécution et pas au-delà. Partager un moteur entre messages ferait
- * raisonner un nettoyage sur une liste d'hôtes collectée bien plus tôt.
- * Construire les onze cleaners ne coûte que onze objets littéraux.
+ * Un moteur neuf par message, portant la phrase secrète de ce message.
+ *
+ * La phrase ne vit donc que le temps d'un nettoyage et n'est jamais persistée.
+ * Elle transite par la fermeture plutôt que par une variable de module : deux
+ * nettoyages concurrents ne peuvent plus se voler leur phrase ni l'effacer sous
+ * les pieds de l'autre.
+ *
+ * La liste des hôtes connus est mémoïsée à la même échelle : partagée plus
+ * longtemps, elle ferait raisonner un nettoyage sur des hôtes périmés, donc
+ * sous-protéger des sites de la keep-list.
  */
-function createRunEngine() {
+function engineFor(passphrase: string | null): Engine {
   return createEngine(buildCleaners(api, cachedKnownHosts(api), chromeMajor), area, {
     backup: async (categoryPlan) => {
       const settings = await settingsStore.get();
       if (!settings.vaultEnabled) return;
-      await backupCookies(categoryPlan);
+      if (passphrase === null) {
+        throw new Error('phrase secrète absente alors que le coffre est actif');
+      }
+      await backupCookies(categoryPlan, passphrase);
     },
   });
-}
-
-async function profileById(id: string) {
-  const profile = (await store.list()).find((candidate) => candidate.id === id);
-  if (profile === undefined) throw new Error(`profil introuvable : ${id}`);
-  return profile;
 }
 
 /**
@@ -94,45 +89,28 @@ async function restore(passphrase: string): Promise<RestoreReport> {
   return { restored, failures };
 }
 
-async function handle(message: Message): Promise<unknown> {
-  switch (message.type) {
-    case 'LIST_PROFILES':
-      return store.list();
-    case 'SAVE_PROFILE':
-      return store.save(message.profile);
-    case 'DELETE_PROFILE':
-      return store.remove(message.id);
-    case 'PREVIEW':
-      return createRunEngine().preview(buildPlan(await profileById(message.profileId), Date.now()));
-    case 'CLEAN': {
-      const now = Date.now();
-      const settings = await settingsStore.get();
-      await vault.purgeExpired(now, settings.vaultRetentionDays);
-      pendingPassphrase = message.passphrase ?? null;
-      try {
-        return await createRunEngine().clean(buildPlan(await profileById(message.profileId), now), now);
-      } finally {
-        pendingPassphrase = null;
-      }
-    }
-    case 'JOURNAL':
-      return createRunEngine().journal();
-    case 'EXPORT':
-      return store.exportJson();
-    case 'IMPORT':
-      return store.importJson(message.json);
-    case 'GET_SETTINGS':
-      return settingsStore.get();
-    case 'SAVE_SETTINGS':
-      return settingsStore.save(message.settings);
-    case 'VAULT_DESCRIBE':
-      return vault.describe();
-    case 'VAULT_RESTORE':
-      return restore(message.passphrase);
-    case 'VAULT_CLEAR':
-      return vault.clear();
-  }
+/**
+ * La rétention du coffre est une promesse de sécurité : passé le délai, des
+ * jetons de session chiffrés ne doivent plus traîner. Purger uniquement au
+ * moment d'un nettoyage ne la tenait pas — un utilisateur qui n'en relance
+ * jamais gardait son coffre indéfiniment.
+ */
+async function purgeExpiredVault(): Promise<void> {
+  const settings = await settingsStore.get();
+  await vault.purgeExpired(Date.now(), settings.vaultRetentionDays);
 }
+
+chrome.runtime.onStartup.addListener(() => void purgeExpiredVault());
+chrome.runtime.onInstalled.addListener(() => void purgeExpiredVault());
+
+const handle = createRouter({
+  profiles: store,
+  settings: settingsStore,
+  vault,
+  engineFor,
+  restore,
+  now: () => Date.now(),
+});
 
 chrome.runtime.onMessage.addListener((message: Message, _sender, sendResponse) => {
   handle(message)
