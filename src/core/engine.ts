@@ -15,6 +15,17 @@ export interface Engine {
   journal(): Promise<RunRecord[]>;
 }
 
+/**
+ * Le journal est une commodité, jamais une source de vérité. Une valeur abîmée
+ * repart de zéro plutôt que d'empoisonner le rapport : l'étalement d'une chaîne
+ * la découpait caractère par caractère, et celui d'un objet aurait jeté — après
+ * la suppression, faisant rapporter un échec pour des données bel et bien
+ * effacées.
+ */
+function readJournal(value: unknown): RunRecord[] {
+  return Array.isArray(value) ? (value as RunRecord[]) : [];
+}
+
 function missing(category: Category): CleanReport {
   return {
     status: 'failed',
@@ -111,7 +122,7 @@ export function createEngine(
       }
 
       const stored = await area.get(KEY);
-      const previous = (stored[KEY] as RunRecord[] | undefined) ?? [];
+      const previous = readJournal(stored[KEY]);
       const record: RunRecord = { profileId: plan.profileId, at, results };
       await area.set({ [KEY]: [record, ...previous].slice(0, JOURNAL_LIMIT) });
 
@@ -120,7 +131,7 @@ export function createEngine(
 
     async journal(): Promise<RunRecord[]> {
       const stored = await area.get(KEY);
-      return (stored[KEY] as RunRecord[] | undefined) ?? [];
+      return readJournal(stored[KEY]);
     },
   };
 }

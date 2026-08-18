@@ -151,4 +151,23 @@ describe('createEngine', () => {
     expect(journal).toHaveLength(JOURNAL_LIMIT);
     expect(journal[0]!.at).toBe(9999);
   });
+
+  it('repart d\'un journal vide si la valeur stockée est illisible', async () => {
+    const engine = createEngine([fakeCleaner('cookies', []), fakeCleaner('history', [])],
+      fakeArea({ runs: 'pas un tableau' }));
+
+    // Le journal est écrit après la suppression : y jeter ferait rapporter un
+    // échec alors que les données ont bel et bien disparu.
+    const results = await engine.clean(plan, 42);
+    expect(results).toHaveLength(2);
+
+    const journal = await engine.journal();
+    expect(journal).toHaveLength(1);
+    expect(journal[0]!.at).toBe(42);
+  });
+
+  it('rend un journal vide plutôt que la valeur illisible', async () => {
+    const engine = createEngine([], fakeArea({ runs: { pas: 'un tableau' } }));
+    expect(await engine.journal()).toEqual([]);
+  });
 });
