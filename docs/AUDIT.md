@@ -534,3 +534,83 @@ C'est le chemin le plus critique du projet, et il n'avait jamais été exécuté
   headless ne dit rien là-dessus.
 - **La recette manuelle** reste à jouer par un humain, dans un navigateur
   visible, avec de vrais sites connectés.
+
+---
+
+## Phase 8 — mise en public
+
+### Un défaut visible que ni les tests ni l'œil n'avaient vu
+
+En produisant les captures d'écran du README, la popup est apparue avec ses
+**trois écrans empilés** : liste des profils, aperçu et rapport de nettoyage en
+même temps, et l'encart rouge « Suppression définitive » affiché sur un profil
+qui ne touche ni aux mots de passe ni aux données de formulaire.
+
+Mesuré dans Chromium 150, sur la popup au chargement :
+
+```
+#preview  display: flex    (attribut hidden présent)
+#report   display: flex
+#danger   display: block
+#vault    display: block
+#spared   display: none    ← le seul correct
+```
+
+`section { display: flex }` et `.callout { display: block }` écrasent la règle
+`[hidden] { display: none }` de la feuille du navigateur : une règle d'auteur
+l'emporte toujours sur la feuille par défaut, quelle que soit la spécificité.
+Seul `#spared`, un `div` sans règle d'auteur sur `display`, se masquait.
+
+Une règle `[hidden] { display: none !important }` dans la feuille commune règle
+le tout. Deux vérifications l'encadrent désormais dans `npm run verify:browser`.
+
+**Pourquoi rien ne l'avait attrapé :** la suite de tests ne charge aucune
+feuille de style, et happy-dom ne calcule pas les styles du navigateur. Le
+script de vérification en navigateur ne regardait que la logique. Il a fallu
+_regarder une image_ pour le voir. C'est la limite exacte de tout ce qui
+précède, et elle mérite d'être retenue : un test qui n'observe pas le rendu ne
+dit rien du rendu.
+
+### La CI, débogage en trois passages
+
+Le workflow n'avait jamais tourné. Le job `browser` a échoué trois fois, chaque
+échec révélant un défaut réel du script de vérification, invisible en local :
+
+1. **`fetch failed` en 2,6 s.** Chrome refuse de démarrer sans `--no-sandbox`
+   dans un conteneur, et `/dev/shm` y est trop petit. L'attente du port était
+   par ailleurs un `sleep` fixe calibré sur une machine locale.
+2. **`Cannot read properties of undefined (reading 'set')`.** Le service worker
+   apparaît dans la liste des cibles avant que `chrome.cookies` y soit lié.
+3. **Les API ne devenaient jamais disponibles.** S'attacher à un worker par le
+   protocole DevTools le laisse suspendu en attente du débogueur : il n'exécute
+   rien. En local le worker était déjà réveillé par l'ouverture d'une page de
+   l'extension avant l'attachement, ce qui masquait le problème.
+
+Les trois corrections rendent le script utilisable ailleurs que sur la machine
+où il a été écrit — ce qui était tout l'intérêt de le mettre dans le dépôt.
+
+### État final
+
+| Mesure                           | Début de l'audit | Fin                                                |
+| -------------------------------- | ---------------- | -------------------------------------------------- |
+| Tests                            | 198              | **278**                                            |
+| Couverture (stmts)               | 62,63 %          | **91,28 %**                                        |
+| `src/ui/popup/popup.ts`          | 0 %              | **96,6 %**                                         |
+| `src/ui/options/options.ts`      | 0 %              | **86,5 %**                                         |
+| `src/core/router.ts`             | n'existait pas   | **100 %**                                          |
+| `src/background.ts`              | 0 %              | 0 % — câblage `chrome.*` pur, exercé en navigateur |
+| Vérifications en navigateur réel | 0                | **9**, rejouables par `npm run verify:browser`     |
+| `npm audit`                      | 5 vulnérabilités | **0**                                              |
+
+### Ce qui reste vrai
+
+- **`background.ts` n'est couvert par aucun test unitaire.** Il ne contient plus
+  que du câblage, mais la restauration des cookies et la sauvegarde du coffre y
+  vivent encore et ne sont exercées que par le script en navigateur.
+- **Rien ne vérifie le rendu automatiquement.** Les captures sont produites à la
+  main par `npm run screenshots` ; aucune comparaison d'image n'existe. Le
+  défaut de `hidden` pourrait revenir sous une autre forme sans que rien ne
+  sonne.
+- **Les trois décisions de produit restent ouvertes** : coffre écrasé par un
+  nouveau nettoyage, cookies partitionnés hors de portée, cache HTTP filtrable
+  par origine mais sur l'URL de la ressource.
