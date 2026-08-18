@@ -31,6 +31,15 @@ const BROWSERS = [
   'brave-browser',
 ];
 
+// `WebSocket` n'est global qu'à partir de Node 22 : le dire clairement plutôt
+// que d'échouer sur un « WebSocket is not defined » au premier appel.
+if (typeof WebSocket === 'undefined') {
+  console.error(
+    `Node ${process.versions.node} n'expose pas WebSocket. Ce script demande Node 22 ou plus récent.`,
+  );
+  process.exit(2);
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const results = [];
 

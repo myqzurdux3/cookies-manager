@@ -7,6 +7,10 @@ npm install
 npm test
 ```
 
+Node 22 ou plus récent : les scripts de `tools/` pilotent un navigateur avec le
+`WebSocket` global, qui n'existe pas avant. La suite de tests, elle, tourne
+aussi sous Node 20.
+
 ## Commandes
 
 | Commande               | Effet                                          |
