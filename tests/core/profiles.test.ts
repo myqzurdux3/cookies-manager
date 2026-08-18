@@ -277,4 +277,21 @@ describe('DEFAULT_PROFILES', () => {
       await expect(store.importJson(json)).rejects.toThrow(/liste de cookies invalide/);
     }
   });
+
+  it('refuse une règle dont le bloc de conservation n’est pas un objet', async () => {
+    for (const keep of [null, 'cookies', ['cookies'], 42]) {
+      const json = JSON.stringify([
+        {
+          id: 'a',
+          name: 'x',
+          since: 'all',
+          categories: ['cookies'],
+          keepRules: [{ pattern: 'github.com', keep }],
+        },
+      ]);
+      await expect(createProfileStore(fakeArea()).importJson(json)).rejects.toThrow(
+        /règle de conservation invalide/,
+      );
+    }
+  });
 });
