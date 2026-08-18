@@ -100,23 +100,63 @@ describe('createStorageCleaner', () => {
 });
 
 describe('createHttpCacheCleaner', () => {
-  it("n'offre aucune finesse par site", () => {
-    expect(createHttpCacheCleaner(fakeApi().api).perSite).toBe('none');
+  it('offre une finesse par origine', () => {
+    expect(createHttpCacheCleaner(fakeApi().api, knownHosts).perSite).toBe('origin');
   });
 
-  it('efface tout le cache sans exclusion, même si des règles existent', async () => {
+  it('exclut les origines protégées du vidage', async () => {
     const { api, calls } = fakeApi();
-    await createHttpCacheCleaner(api).clean(
+    await createHttpCacheCleaner(api, knownHosts).clean(
       plan('httpCache', [{ pattern: 'github.com', keep: { httpCache: true } }], 42),
     );
     expect(calls[0]!.types).toEqual({ cache: true });
-    expect(calls[0]!.options).toEqual({ since: 42 });
+    expect(calls[0]!.options.excludeOrigins).toEqual(['https://github.com', 'http://github.com']);
+    expect(calls[0]!.options.since).toBe(42);
   });
 
-  it("explique dans l'aperçu que la conservation par site est impossible", async () => {
-    const preview = await createHttpCacheCleaner(fakeApi().api).preview(plan('httpCache', []));
+  it('développe un wildcard à partir des hôtes connus', async () => {
+    const { api, calls } = fakeApi();
+    await createHttpCacheCleaner(api, knownHosts).clean(
+      plan('httpCache', [{ pattern: '*.github.com', keep: { httpCache: true } }]),
+    );
+    expect(calls[0]!.options.excludeOrigins).toContain('https://gist.github.com');
+    expect(calls[0]!.options.excludeOrigins).not.toContain('https://example.com');
+  });
+
+  it("vide tout quand rien n'est protégé, sans passer d'exclusion vide", async () => {
+    const { api, calls } = fakeApi();
+    await createHttpCacheCleaner(api, knownHosts).clean(plan('httpCache', []));
+    expect(calls[0]!.options.excludeOrigins).toBeUndefined();
+  });
+
+  it("avertit dans l'aperçu de ce que la protection ne couvre pas", async () => {
+    const preview = await createHttpCacheCleaner(fakeApi().api, knownHosts).preview(
+      plan('httpCache', [{ pattern: 'github.com', keep: { httpCache: true } }]),
+    );
     expect(preview.countable).toBe(false);
-    expect(preview.note).toMatch(/vidé en bloc/i);
+    // Le filtre porte sur l'URL de la ressource, pas sur le site visité.
+    expect(preview.note).toMatch(/ressource/i);
+    expect(preview.note).toMatch(/tiers|CDN/i);
+  });
+
+  it("n'avertit pas de la limite quand aucun site n'est protégé", async () => {
+    const preview = await createHttpCacheCleaner(fakeApi().api, knownHosts).preview(
+      plan('httpCache', []),
+    );
+    expect(preview.note).not.toMatch(/ressource/i);
+  });
+
+  it('rend un statut échoué quand l’API rejette', async () => {
+    const rejette = {
+      browsingData: {
+        remove() {
+          return Promise.reject(new Error('cache verrouillé'));
+        },
+      },
+    };
+    const report = await createHttpCacheCleaner(rejette, knownHosts).clean(plan('httpCache', []));
+    expect(report.status).toBe('failed');
+    expect(report.error).toMatch(/cache verrouillé/);
   });
 });
 
@@ -130,7 +170,7 @@ describe('chemins d’échec des cleaners tout-ou-rien', () => {
   };
 
   it('le cache HTTP rapporte un échec plutôt que de le taire', async () => {
-    const report = await createHttpCacheCleaner(rejette).clean(plan('httpCache', []));
+    const report = await createHttpCacheCleaner(rejette, knownHosts).clean(plan('httpCache', []));
     expect(report).toMatchObject({ status: 'failed', deleted: 0, kept: 0 });
     expect(report.error).toMatch(/permission révoquée/);
   });
@@ -150,7 +190,7 @@ describe('chemins d’échec des cleaners tout-ou-rien', () => {
         },
       },
     };
-    const report = await createHttpCacheCleaner(brut).clean(plan('httpCache', []));
+    const report = await createHttpCacheCleaner(brut, knownHosts).clean(plan('httpCache', []));
     expect(report.error).toBe('panne brute');
   });
 });

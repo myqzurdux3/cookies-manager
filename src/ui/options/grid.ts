@@ -6,7 +6,7 @@ export const PER_SITE: Record<Category, 'exact' | 'origin' | 'none'> = {
   indexedDB: 'origin',
   cacheStorage: 'origin',
   serviceWorkers: 'origin',
-  httpCache: 'none',
+  httpCache: 'origin',
   history: 'exact',
   downloads: 'exact',
   formData: 'none',
@@ -29,6 +29,14 @@ export const COLUMNS: Column[] = [
     categories: ['localStorage', 'indexedDB', 'cacheStorage', 'serviceWorkers'],
     hint: 'localStorage, IndexedDB, cache des applications et service workers',
   },
+  {
+    key: 'httpCache',
+    label: 'Cache',
+    categories: ['httpCache'],
+    hint:
+      "Protection partielle : l'exclusion porte sur l'URL de la ressource, pas sur le site " +
+      'visité. Ce qu’un site protégé charge depuis un CDN tiers est tout de même vidé.',
+  },
   { key: 'history', label: 'Historique', categories: ['history'] },
   { key: 'downloads', label: 'Téléchargements', categories: ['downloads'] },
   {
@@ -42,7 +50,7 @@ export const COLUMNS: Column[] = [
 ];
 
 /** Catégories que l'API ne sait pas exclure par site : hors tableau, dans leur propre bloc. */
-export const UNFILTERABLE: Category[] = ['httpCache', 'passwords', 'formData'];
+export const UNFILTERABLE: Category[] = ['passwords', 'formData'];
 
 export type GroupState = 'all' | 'partial' | 'none';
 

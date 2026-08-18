@@ -78,6 +78,10 @@ celles-ci, mesurées dans un vrai navigateur :
   règles, jamais celles que vous avez accordées vous-même.
 - **Historique** : la suppression d'une URL efface toutes ses visites, sans
   borne de temps.
+- **Cookies cloisonnés** : ceux qu'un service tiers pose depuis une page ne sont
+  pas visibles de l'API, et survivent même à un nettoyage total.
+- **Cache HTTP** : protégeable par site, mais le filtre porte sur l'URL de la
+  ressource — ce qu'un site charge depuis un CDN tiers est vidé quand même.
 
 Le [coffre de cookies](docs/coffre.md) est optionnel et désactivé par défaut :
 il chiffre les cookies condamnés avant de les supprimer, pour pouvoir les

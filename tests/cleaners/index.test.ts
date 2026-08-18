@@ -46,7 +46,7 @@ describe('buildCleaners', () => {
     const byId = new Map(buildCleaners(fakeChrome(), async () => []).map((c) => [c.id, c.perSite]));
     expect(byId.get('cookies')).toBe('exact');
     expect(byId.get('localStorage')).toBe('origin');
-    expect(byId.get('httpCache')).toBe('none');
+    expect(byId.get('httpCache')).toBe('origin');
     expect(byId.get('passwords')).toBe('none');
     expect(byId.get('formData')).toBe('none');
   });

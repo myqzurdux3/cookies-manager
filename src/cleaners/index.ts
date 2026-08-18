@@ -78,7 +78,7 @@ export function buildCleaners(
     createStorageCleaner(api, 'indexedDB', knownHosts),
     createStorageCleaner(api, 'cacheStorage', knownHosts),
     createStorageCleaner(api, 'serviceWorkers', knownHosts),
-    createHttpCacheCleaner(api),
+    createHttpCacheCleaner(api, knownHosts),
     createHistoryCleaner(api as HistoryApi),
     createDownloadsCleaner(api as DownloadsApi),
     createCredentialsCleaner(api, 'formData', chromeMajor),

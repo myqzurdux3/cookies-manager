@@ -34,20 +34,26 @@ Une extension peut en revanche _masquer_ une autorisation utilisateur en posant
 sa propre règle, qui prend le pas tant qu'elle est installée. Ce n'est pas une
 suppression.
 
-## Cache HTTP : filtrable, mais pas comme on l'attend
+## Cache HTTP : filtrable, mais la protection est partielle
 
-Contrairement à ce que cette documentation affirmait jusqu'ici, l'API **accepte**
-`origins` et `excludeOrigins` pour le cache, depuis Chrome 74 : « Only supported
-for cookies, storage and cache. »
+L'API accepte `origins` et `excludeOrigins` pour le cache depuis Chrome 74 :
+« Only supported for cookies, storage and cache. » Cette documentation
+affirmait le contraire jusqu'à l'audit ; c'était faux.
 
-Cette extension n'en tire pas parti, et c'est délibéré : le filtre s'applique à
-l'**URL de la ressource**, pas au site visité. Exclure `https://exemple.com` ne
-préserverait que les ressources servies par ce domaine — pas les images, polices
-ou scripts que le site charge depuis un CDN tiers. Une case « conserver le cache
-de ce site » promettrait donc plus qu'elle ne tient.
+L'extension en tire désormais parti : le cache figure dans la grille de la
+keep-list, et les origines protégées sont exclues du vidage. **Mais la
+protection est partielle, et il faut le savoir avant de cocher la case :**
 
-À savoir aussi : la borne de temps porte sur la **dernière utilisation** d'une
-entrée de cache, pas sur sa création.
+- Le filtre porte sur l'**URL de la ressource**, pas sur le site visité.
+  Protéger `exemple.com` préserve ce que sert `exemple.com` — pas les images,
+  polices ou scripts que la page charge depuis un CDN tiers. Un site protégé se
+  rechargera donc partiellement depuis le réseau.
+- Inversement, protéger un domaine de CDN préserverait ses ressources pour
+  **tous** les sites qui s'en servent.
+- La borne de temps porte sur la **dernière utilisation** d'une entrée de cache,
+  pas sur sa création.
+
+L'aperçu rappelle ces limites dès qu'au moins un site est protégé.
 
 ## Historique : la suppression n'est pas bornée dans le temps
 

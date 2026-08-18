@@ -78,9 +78,9 @@ function renderUnfilterableNote(): void {
   const names = UNFILTERABLE.map((category) => CATEGORY_LABELS[category]).join(' · ');
   unfilterableEl.textContent =
     `Ignorent la keep-list : ${names}. Ces catégories sont vidées en bloc et ne figurent donc ` +
-    `pas dans la grille. Les raisons diffèrent selon la catégorie — voir docs/limites-navigateur.md. ` +
-    `Depuis Chrome 144, la suppression des mots de passe par une extension est refusée par le ` +
-    `navigateur : l'extension le signale au lieu de prétendre l'avoir faite.`;
+    `pas dans la grille. Depuis Chrome 144, la suppression des mots de passe par une extension ` +
+    `est refusée par le navigateur : l'extension le signale au lieu de prétendre l'avoir faite. ` +
+    `Voir docs/limites-navigateur.md.`;
 }
 
 function renderKeeplist(): void {

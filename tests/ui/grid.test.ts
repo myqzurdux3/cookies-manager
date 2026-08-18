@@ -18,7 +18,9 @@ describe('PER_SITE', () => {
 
   it("correspond aux limites réelles de l'API", () => {
     expect(PER_SITE.cookies).toBe('exact');
-    expect(PER_SITE.httpCache).toBe('none');
+    // Le cache accepte `excludeOrigins` depuis Chrome 74, contrairement à ce
+    // que ce projet a longtemps affirmé — protection partielle, mais réelle.
+    expect(PER_SITE.httpCache).toBe('origin');
     expect(PER_SITE.passwords).toBe('none');
     expect(PER_SITE.formData).toBe('none');
   });
