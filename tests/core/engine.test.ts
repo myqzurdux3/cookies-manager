@@ -183,4 +183,54 @@ describe('createEngine', () => {
     const engine = createEngine([], fakeArea({ runs: { pas: 'un tableau' } }));
     expect(await engine.journal()).toEqual([]);
   });
+
+  it("rapporte une catégorie sans cleaner au lieu de l'ignorer", async () => {
+    const engine = createEngine([], fakeArea());
+    const [previews, reports] = await Promise.all([engine.preview(plan), engine.clean(plan, 1)]);
+
+    expect(previews[0]!.preview).toMatchObject({ countable: false, items: 0 });
+    expect(previews[0]!.preview.note).toMatch(/aucun cleaner disponible pour cookies/);
+    expect(reports[0]!.report).toMatchObject({ status: 'failed', deleted: 0, kept: 0 });
+    expect(reports[0]!.report.error).toMatch(/aucun cleaner disponible/);
+  });
+
+  it("remonte l'échec d'un aperçu sans faire tomber les autres catégories", async () => {
+    const cassé: Cleaner = {
+      id: 'cookies',
+      perSite: 'exact',
+      preview() {
+        return Promise.reject(new Error('aperçu indisponible'));
+      },
+      async clean() {
+        return { status: 'ok', deleted: 0, kept: 0 };
+      },
+    };
+    const previews = await createEngine([cassé, fakeCleaner('history', [])], fakeArea()).preview(
+      plan,
+    );
+
+    expect(previews[0]!.preview.note).toMatch(/aperçu indisponible/);
+    expect(previews[0]!.preview.countable).toBe(false);
+    // La catégorie suivante doit rester chiffrable.
+    expect(previews[1]!.preview.countable).toBe(true);
+  });
+
+  it('convertit en texte une erreur qui n’est pas une Error', async () => {
+    const cassé: Cleaner = {
+      id: 'cookies',
+      perSite: 'exact',
+      async preview() {
+        return { countable: true, items: 0 };
+      },
+      clean() {
+        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- le chemin testé est justement celui d’une cause qui n’est pas une Error
+        return Promise.reject('panne sans objet Error');
+      },
+    };
+    const [resultat] = await createEngine([cassé], fakeArea()).clean(
+      { profileId: 'p1', since: 0, categories: [{ category: 'cookies', since: 0, keepRules: [] }] },
+      1,
+    );
+    expect(resultat!.report.error).toBe('panne sans objet Error');
+  });
 });

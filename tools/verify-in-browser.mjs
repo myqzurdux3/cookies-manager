@@ -154,6 +154,10 @@ const proc = spawn(
     `--user-data-dir=${profile}`,
     `--load-extension=${DIST}`,
     `--disable-extensions-except=${DIST}`,
+    // Nécessaires sur un exécuteur d'intégration continue : le bac à sable est
+    // inutilisable en conteneur, et /dev/shm y est trop petit pour Chrome.
+    '--no-sandbox',
+    '--disable-dev-shm-usage',
     '--no-first-run',
     '--no-default-browser-check',
     '--disable-sync',
@@ -162,12 +166,37 @@ const proc = spawn(
   ],
   // Groupe de processus dédié : le navigateur se lance derrière une enveloppe
   // shell, et seul un signal au groupe entier l'arrête réellement.
-  { stdio: 'ignore', detached: true },
+  { stdio: ['ignore', 'ignore', 'pipe'], detached: true },
 );
+
+let erreurNavigateur = '';
+proc.stderr?.on('data', (d) => (erreurNavigateur += String(d)));
+
+const dernieresLignes = () =>
+  erreurNavigateur.trim().split('\n').slice(-3).join(' | ') || 'aucun message';
+
+/**
+ * Sonder l'ouverture du port plutôt que d'attendre un délai fixe : le démarrage
+ * prend quelques centaines de millisecondes en local et plusieurs secondes sur
+ * un exécuteur d'intégration continue.
+ */
+async function attendreNavigateur(timeoutMs = 30000) {
+  const limite = Date.now() + timeoutMs;
+  while (Date.now() < limite) {
+    if (proc.exitCode !== null) {
+      throw new Error(`le navigateur s'est arrêté (code ${proc.exitCode}) : ${dernieresLignes()}`);
+    }
+    if (!(await portLibre())) return;
+    await sleep(400);
+  }
+  throw new Error(
+    `le navigateur n'a pas ouvert son port en ${timeoutMs / 1000} s : ${dernieresLignes()}`,
+  );
+}
 
 let code = 0;
 try {
-  await sleep(2500);
+  await attendreNavigateur();
   const sw = await waitFor((t) => t.type === 'service_worker');
   const extensionId = new URL(sw.url).host;
   console.log(`Navigateur : ${browser}\nExtension  : ${extensionId}\n`);

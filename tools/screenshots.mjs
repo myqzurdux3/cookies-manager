@@ -127,6 +127,8 @@ const proc = spawn(
     `--user-data-dir=${profile}`,
     `--load-extension=${DIST}`,
     `--disable-extensions-except=${DIST}`,
+    '--no-sandbox',
+    '--disable-dev-shm-usage',
     '--force-device-scale-factor=2',
     '--hide-scrollbars',
     '--no-first-run',
@@ -181,7 +183,12 @@ async function capture(client, nom, { width, hauteurMax }) {
 }
 
 try {
-  await sleep(2500);
+  // Sonder l'ouverture du port plutôt qu'attendre un délai fixe : `portLibre()`
+  // rend `true` tant que rien n'écoute, donc on attend qu'il rende `false`.
+  for (let i = 0; i < 60; i += 1) {
+    if (!(await portLibre())) break;
+    await sleep(400);
+  }
   const sw = await waitFor((t) => t.type === 'service_worker');
   const extensionId = new URL(sw.url).host;
   const swClient = await cdp(sw.webSocketDebuggerUrl);

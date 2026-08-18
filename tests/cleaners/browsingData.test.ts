@@ -120,6 +120,41 @@ describe('createHttpCacheCleaner', () => {
   });
 });
 
+describe('chemins d’échec des cleaners tout-ou-rien', () => {
+  const rejette = {
+    browsingData: {
+      remove() {
+        return Promise.reject(new Error('permission révoquée'));
+      },
+    },
+  };
+
+  it('le cache HTTP rapporte un échec plutôt que de le taire', async () => {
+    const report = await createHttpCacheCleaner(rejette).clean(plan('httpCache', []));
+    expect(report).toMatchObject({ status: 'failed', deleted: 0, kept: 0 });
+    expect(report.error).toMatch(/permission révoquée/);
+  });
+
+  it('les données de formulaire aussi', async () => {
+    const report = await createCredentialsCleaner(rejette, 'formData').clean(plan('formData', []));
+    expect(report.status).toBe('failed');
+    expect(report.error).toMatch(/permission révoquée/);
+  });
+
+  it('une panne sans objet Error reste lisible', async () => {
+    const brut = {
+      browsingData: {
+        remove() {
+          // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- le chemin testé est justement celui d’une cause qui n’est pas une Error
+          return Promise.reject('panne brute');
+        },
+      },
+    };
+    const report = await createHttpCacheCleaner(brut).clean(plan('httpCache', []));
+    expect(report.error).toBe('panne brute');
+  });
+});
+
 describe('createCredentialsCleaner', () => {
   it("n'offre aucune finesse par site", () => {
     expect(createCredentialsCleaner(fakeApi().api, 'passwords').perSite).toBe('none');
