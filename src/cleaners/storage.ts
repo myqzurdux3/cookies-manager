@@ -18,10 +18,7 @@ export type StorageCategory = 'localStorage' | 'indexedDB' | 'cacheStorage' | 's
 const PARTIAL_NOTE =
   "Liste des origines dérivée des cookies et de l'historique : c'est un minorant, la liste n'est pas exhaustive.";
 
-async function protectedOrigins(
-  plan: CategoryPlan,
-  knownHosts: OriginSource,
-): Promise<string[]> {
+async function protectedOrigins(plan: CategoryPlan, knownHosts: OriginSource): Promise<string[]> {
   const hosts = new Set<string>();
 
   for (const rule of plan.keepRules) {

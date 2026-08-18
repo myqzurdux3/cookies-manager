@@ -46,16 +46,28 @@
   }
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   background: var(--bg);
   color: var(--text);
-  font: 13px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  font:
+    13px/1.55 system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
   margin: 0;
 }
 
-h1, h2, h3 { font-weight: 650; letter-spacing: -0.01em; margin: 0; }
+h1,
+h2,
+h3 {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
 
 button {
   font: inherit;
@@ -65,11 +77,18 @@ button {
   color: var(--text);
   padding: 6px 12px;
   cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
 }
 
-button:hover:not(:disabled) { background: var(--surface-sunken); }
-button:disabled { opacity: 0.45; cursor: not-allowed; }
+button:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 button.primary {
   background: var(--accent);
@@ -78,11 +97,14 @@ button.primary {
   font-weight: 600;
 }
 
-button.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+button.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
 
-input[type="text"],
-input[type="password"],
-input[type="number"],
+input[type='text'],
+input[type='password'],
+input[type='number'],
 select,
 textarea {
   font: inherit;
@@ -93,13 +115,32 @@ textarea {
   padding: 6px 8px;
 }
 
-input[type="checkbox"] { accent-color: var(--accent); }
+input[type='checkbox'] {
+  accent-color: var(--accent);
+}
 
-:focus-visible { outline: none; box-shadow: var(--focus); border-color: var(--accent); }
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+  border-color: var(--accent);
+}
 
-.hint { color: var(--muted); font-size: 12px; }
+.hint {
+  color: var(--muted);
+  font-size: 12px;
+}
 
-
-.brand { display: flex; align-items: center; gap: 10px; }
-.brand-mark { width: 26px; height: 26px; flex: none; }
-.brand-name { font-size: 14px; font-weight: 650; }
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-mark {
+  width: 26px;
+  height: 26px;
+  flex: none;
+}
+.brand-name {
+  font-size: 14px;
+  font-weight: 650;
+}

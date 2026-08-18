@@ -43,7 +43,11 @@ export function createCredentialsCleaner(
     perSite: 'none',
 
     async preview(): Promise<Preview> {
-      return { countable: false, items: 0, note: unavailable ? PASSWORDS_UNAVAILABLE : NOTES[category] };
+      return {
+        countable: false,
+        items: 0,
+        note: unavailable ? PASSWORDS_UNAVAILABLE : NOTES[category],
+      };
     },
 
     async clean(plan: CategoryPlan): Promise<CleanReport> {

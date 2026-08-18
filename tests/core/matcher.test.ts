@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeHost, matchesPattern, isProtected, cookieProtection } from '../../src/core/matcher';
+import {
+  normalizeHost,
+  matchesPattern,
+  isProtected,
+  cookieProtection,
+} from '../../src/core/matcher';
 import type { KeepRule } from '../../src/core/types';
 
 describe('normalizeHost', () => {
@@ -41,7 +46,7 @@ describe('matchesPattern', () => {
     expect(matchesPattern('evilgithub.com', '*.github.com')).toBe(false);
   });
 
-  it('l\'étoile seule correspond à tout', () => {
+  it("l'étoile seule correspond à tout", () => {
     expect(matchesPattern('n-importe-quoi.fr', '*')).toBe(true);
   });
 });
@@ -70,7 +75,7 @@ describe('isProtected', () => {
 });
 
 describe('cookieProtection', () => {
-  it('protège tous les cookies quand aucun nom n\'est précisé', () => {
+  it("protège tous les cookies quand aucun nom n'est précisé", () => {
     const rules: KeepRule[] = [{ pattern: 'github.com', keep: { cookies: true } }];
     expect(cookieProtection('github.com', rules)).toEqual({ all: true, names: new Set() });
   });
@@ -95,7 +100,7 @@ describe('cookieProtection', () => {
     );
   });
 
-  it('une règle sans liste de noms l\'emporte sur une règle restrictive', () => {
+  it("une règle sans liste de noms l'emporte sur une règle restrictive", () => {
     const rules: KeepRule[] = [
       { pattern: 'github.com', keep: { cookies: true }, keepCookies: ['user_session'] },
       { pattern: '*.github.com', keep: { cookies: true } },
@@ -108,21 +113,21 @@ describe('cookieProtection', () => {
     expect(cookieProtection('github.com', rules)).toEqual({ all: false, names: new Set() });
   });
 
-describe('robustesse des motifs stockés', () => {
-  // Un profil importé ou écrit par une version antérieure peut contenir un
-  // motif non normalisé. Supprimer le `.trim().toLowerCase()` de matchesPattern
-  // laissait toute la suite verte.
-  it('ignore la casse du motif', () => {
-    expect(matchesPattern('github.com', 'GitHub.com')).toBe(true);
-    expect(matchesPattern('gist.github.com', '*.GITHUB.COM')).toBe(true);
-  });
+  describe('robustesse des motifs stockés', () => {
+    // Un profil importé ou écrit par une version antérieure peut contenir un
+    // motif non normalisé. Supprimer le `.trim().toLowerCase()` de matchesPattern
+    // laissait toute la suite verte.
+    it('ignore la casse du motif', () => {
+      expect(matchesPattern('github.com', 'GitHub.com')).toBe(true);
+      expect(matchesPattern('gist.github.com', '*.GITHUB.COM')).toBe(true);
+    });
 
-  it('ignore les espaces autour du motif', () => {
-    expect(matchesPattern('github.com', '  github.com  ')).toBe(true);
-  });
+    it('ignore les espaces autour du motif', () => {
+      expect(matchesPattern('github.com', '  github.com  ')).toBe(true);
+    });
 
-  it('ignore la casse de l’hôte', () => {
-    expect(matchesPattern('GitHub.com', 'github.com')).toBe(true);
+    it('ignore la casse de l’hôte', () => {
+      expect(matchesPattern('GitHub.com', 'github.com')).toBe(true);
+    });
   });
-});
 });

@@ -107,7 +107,9 @@ describe('createVault', () => {
     const { area } = fakeArea();
     const vault = createVault(crypto, area, TEST_ITERATIONS);
     await vault.store(COOKIES, 'phrase', 0);
-    expect(await vault.purgeExpired((DEFAULT_RETENTION_DAYS + 1) * DAY, DEFAULT_RETENTION_DAYS)).toBe(true);
+    expect(
+      await vault.purgeExpired((DEFAULT_RETENTION_DAYS + 1) * DAY, DEFAULT_RETENTION_DAYS),
+    ).toBe(true);
     expect(await vault.describe()).toBeNull();
   });
 

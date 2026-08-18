@@ -39,11 +39,7 @@ export const UNFILTERABLE: Category[] = ['httpCache', 'passwords', 'formData'];
 
 export type GroupState = 'all' | 'partial' | 'none';
 
-export function groupState(
-  rules: KeepRule[],
-  pattern: string,
-  categories: Category[],
-): GroupState {
+export function groupState(rules: KeepRule[], pattern: string, categories: Category[]): GroupState {
   const rule = rules.find((candidate) => candidate.pattern === pattern);
   if (rule === undefined) return 'none';
   const kept = categories.filter((category) => rule.keep[category] === true).length;

@@ -44,7 +44,9 @@ describe('createSettingsStore', () => {
 
   it('refuse une rétention hors bornes', async () => {
     const store = createSettingsStore(fakeArea());
-    await expect(store.save({ vaultEnabled: true, vaultRetentionDays: 0 })).rejects.toThrow(/rétention/i);
+    await expect(store.save({ vaultEnabled: true, vaultRetentionDays: 0 })).rejects.toThrow(
+      /rétention/i,
+    );
     await expect(
       store.save({ vaultEnabled: true, vaultRetentionDays: MAX_RETENTION_DAYS + 1 }),
     ).rejects.toThrow(/rétention/i);
@@ -52,7 +54,9 @@ describe('createSettingsStore', () => {
 
   it('refuse une rétention non entière', async () => {
     const store = createSettingsStore(fakeArea());
-    await expect(store.save({ vaultEnabled: true, vaultRetentionDays: 2.5 })).rejects.toThrow(/rétention/i);
+    await expect(store.save({ vaultEnabled: true, vaultRetentionDays: 2.5 })).rejects.toThrow(
+      /rétention/i,
+    );
   });
 
   it('remplace une rétention hors bornes par le défaut au lieu de la propager', async () => {

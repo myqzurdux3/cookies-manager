@@ -42,7 +42,9 @@ export function createCookiesCleaner(api: CookiesApi): Cleaner {
     async preview(plan: CategoryPlan): Promise<Preview> {
       const cookies = await api.cookies.getAll({});
       const items = cookies.filter((cookie) => isDeletable(cookie, plan)).length;
-      return plan.since === 0 ? { countable: true, items } : { countable: true, items, note: TIME_NOTE };
+      return plan.since === 0
+        ? { countable: true, items }
+        : { countable: true, items, note: TIME_NOTE };
     },
 
     async clean(plan: CategoryPlan): Promise<CleanReport> {

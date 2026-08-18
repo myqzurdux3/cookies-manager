@@ -28,8 +28,10 @@ function ok(data: unknown): Reply {
 const HAPPY = (type: string): Reply => {
   if (type === 'GET_SETTINGS') return ok({ vaultEnabled: false, vaultRetentionDays: 7 });
   if (type === 'LIST_PROFILES') return ok([PROFILE]);
-  if (type === 'PREVIEW') return ok([{ category: 'cookies', preview: { countable: true, items: 3 } }]);
-  if (type === 'CLEAN') return ok([{ category: 'cookies', report: { status: 'ok', deleted: 3, kept: 1 } }]);
+  if (type === 'PREVIEW')
+    return ok([{ category: 'cookies', preview: { countable: true, items: 3 } }]);
+  if (type === 'CLEAN')
+    return ok([{ category: 'cookies', report: { status: 'ok', deleted: 3, kept: 1 } }]);
   return ok(null);
 };
 
@@ -57,7 +59,9 @@ describe('popup', () => {
   });
 
   it("affiche l'erreur du service worker au lieu de rester figée sur l'aperçu", async () => {
-    await mountPopup((type) => (type === 'PREVIEW' ? { ok: false, error: 'aperçu impossible' } : HAPPY(type)));
+    await mountPopup((type) =>
+      type === 'PREVIEW' ? { ok: false, error: 'aperçu impossible' } : HAPPY(type),
+    );
 
     clickProfile();
     await settle();
@@ -67,7 +71,9 @@ describe('popup', () => {
   });
 
   it('réactive le bouton quand le nettoyage échoue, au lieu de le laisser mort', async () => {
-    await mountPopup((type) => (type === 'CLEAN' ? { ok: false, error: 'moteur en panne' } : HAPPY(type)));
+    await mountPopup((type) =>
+      type === 'CLEAN' ? { ok: false, error: 'moteur en panne' } : HAPPY(type),
+    );
 
     clickProfile();
     await settle();

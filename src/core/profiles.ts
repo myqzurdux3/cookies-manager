@@ -103,7 +103,10 @@ function validate(value: unknown): Profile[] {
 
       // Validate keepCookies if present
       if ('keepCookies' in rule && rule.keepCookies !== undefined) {
-        if (!Array.isArray(rule.keepCookies) || !rule.keepCookies.every((item: unknown) => typeof item === 'string')) {
+        if (
+          !Array.isArray(rule.keepCookies) ||
+          !rule.keepCookies.every((item: unknown) => typeof item === 'string')
+        ) {
           throw new Error('liste de cookies invalide');
         }
       }

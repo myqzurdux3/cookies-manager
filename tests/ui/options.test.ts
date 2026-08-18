@@ -80,7 +80,9 @@ describe('page d’options', () => {
   });
 
   it("affiche l'échec d'un export au lieu de le perdre", async () => {
-    await mountOptions((type) => (type === 'EXPORT' ? { ok: false, error: 'export refusé' } : HAPPY(type)));
+    await mountOptions((type) =>
+      type === 'EXPORT' ? { ok: false, error: 'export refusé' } : HAPPY(type),
+    );
     click('#export');
     await settle();
     expect(text('#status')).toContain('export refusé');

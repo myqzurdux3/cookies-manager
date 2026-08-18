@@ -43,7 +43,11 @@ describe('createEngine', () => {
   it("n'interroge que les cleaners présents dans le plan", async () => {
     const order: string[] = [];
     const engine = createEngine(
-      [fakeCleaner('cookies', order), fakeCleaner('history', order), fakeCleaner('httpCache', order)],
+      [
+        fakeCleaner('cookies', order),
+        fakeCleaner('history', order),
+        fakeCleaner('httpCache', order),
+      ],
       fakeArea(),
     );
     const previews = await engine.preview(plan);
@@ -52,7 +56,10 @@ describe('createEngine', () => {
 
   it("exécute les cleaners dans l'ordre du plan", async () => {
     const order: string[] = [];
-    const engine = createEngine([fakeCleaner('history', order), fakeCleaner('cookies', order)], fakeArea());
+    const engine = createEngine(
+      [fakeCleaner('history', order), fakeCleaner('cookies', order)],
+      fakeArea(),
+    );
     await engine.clean(plan, 1000);
     expect(order).toEqual(['cookies', 'history']);
   });
@@ -143,7 +150,11 @@ describe('createEngine', () => {
 
   it('garde le plus récent en tête et plafonne le journal', async () => {
     const area = fakeArea({
-      runs: Array.from({ length: JOURNAL_LIMIT }, (_, i) => ({ profileId: `old${i}`, at: i, results: [] })),
+      runs: Array.from({ length: JOURNAL_LIMIT }, (_, i) => ({
+        profileId: `old${i}`,
+        at: i,
+        results: [],
+      })),
     });
     const engine = createEngine([fakeCleaner('cookies', []), fakeCleaner('history', [])], area);
     await engine.clean(plan, 9999);
@@ -152,9 +163,11 @@ describe('createEngine', () => {
     expect(journal[0]!.at).toBe(9999);
   });
 
-  it('repart d\'un journal vide si la valeur stockée est illisible', async () => {
-    const engine = createEngine([fakeCleaner('cookies', []), fakeCleaner('history', [])],
-      fakeArea({ runs: 'pas un tableau' }));
+  it("repart d'un journal vide si la valeur stockée est illisible", async () => {
+    const engine = createEngine(
+      [fakeCleaner('cookies', []), fakeCleaner('history', [])],
+      fakeArea({ runs: 'pas un tableau' }),
+    );
 
     // Le journal est écrit après la suppression : y jeter ferait rapporter un
     // échec alors que les données ont bel et bien disparu.

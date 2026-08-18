@@ -49,9 +49,9 @@ describe('previewRow', () => {
 
 describe('reportRow', () => {
   it('résume un nettoyage réussi', () => {
-    expect(reportRow({ category: 'cookies', report: { status: 'ok', deleted: 3, kept: 2 } })).toEqual(
-      { label: 'Cookies', value: '3 supprimé(s) · 2 conservé(s)', tone: 'strong' },
-    );
+    expect(
+      reportRow({ category: 'cookies', report: { status: 'ok', deleted: 3, kept: 2 } }),
+    ).toEqual({ label: 'Cookies', value: '3 supprimé(s) · 2 conservé(s)', tone: 'strong' });
   });
 
   it("met l'erreur en note pour un nettoyage partiel", () => {

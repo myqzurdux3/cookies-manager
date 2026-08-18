@@ -91,7 +91,9 @@ export function formatRunSummary(summary: RunSummary): string {
     plural(summary.kept, 'conservé', 'conservés'),
   ];
   if (summary.wiped > 0) {
-    parts.push(plural(summary.wiped, 'catégorie vidée entièrement', 'catégories vidées entièrement'));
+    parts.push(
+      plural(summary.wiped, 'catégorie vidée entièrement', 'catégories vidées entièrement'),
+    );
   }
   if (summary.failed > 0) {
     parts.push(plural(summary.failed, 'catégorie en échec', 'catégories en échec'));
@@ -128,7 +130,10 @@ export function formatRestoreReport(report: RestoreReport): string {
  * Résume le coffre sans jamais toucher à son contenu : nombre de cookies,
  * domaines et date. Aucune valeur de cookie ne transite par cette fonction.
  */
-export function formatVaultState(summary: VaultSummary | null, formatDate: (at: number) => string): string {
+export function formatVaultState(
+  summary: VaultSummary | null,
+  formatDate: (at: number) => string,
+): string {
   if (summary === null) return 'Aucun coffre enregistré.';
   const domains = summary.domains.length;
   return `Coffre du ${formatDate(summary.createdAt)} : ${summary.cookieCount} cookie(s) sur ${domains} domaine(s).`;

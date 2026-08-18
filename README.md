@@ -15,11 +15,11 @@ empaquetée » → choisir `dist/`.
 
 ## Développement
 
-| Commande | Effet |
-|---|---|
-| `npm test` | Suite Vitest, sans navigateur |
-| `npm run typecheck` | Vérification TypeScript |
-| `npm run build` | Produit `dist/` |
+| Commande                      | Effet                                                              |
+| ----------------------------- | ------------------------------------------------------------------ |
+| `npm test`                    | Suite Vitest, sans navigateur                                      |
+| `npm run typecheck`           | Vérification TypeScript                                            |
+| `npm run build`               | Produit `dist/`                                                    |
 | `python3 tools/make-icons.py` | Régénère le logo : `public/icons/logo.svg` et les PNG du manifeste |
 
 Le logo n'est pas un binaire opaque : sa géométrie vit dans `tools/make-icons.py`,
@@ -29,14 +29,14 @@ relancer la commande. Seul Pillow est requis, et seulement pour cette régénér
 
 ## Syntaxe des motifs de keep-list
 
-| Vous tapez | Enregistré comme | Couvre |
-|---|---|---|
-| `github.com` | `github.com` | cet hôte exactement, plus ses cookies de domaine `.github.com` |
-| `*.github.com` | `*.github.com` | `github.com` et tous ses sous-domaines |
-| `*google.com` | `*.google.com` | corrigé : le point manquant est ajouté |
-| `.claude.ai` | `*.claude.ai` | corrigé : un point de tête vaut wildcard |
-| `https://github.com/x` | `github.com` | corrigé : seul l'hôte est retenu |
-| `*` | `*` | tous les sites |
+| Vous tapez             | Enregistré comme | Couvre                                                         |
+| ---------------------- | ---------------- | -------------------------------------------------------------- |
+| `github.com`           | `github.com`     | cet hôte exactement, plus ses cookies de domaine `.github.com` |
+| `*.github.com`         | `*.github.com`   | `github.com` et tous ses sous-domaines                         |
+| `*google.com`          | `*.google.com`   | corrigé : le point manquant est ajouté                         |
+| `.claude.ai`           | `*.claude.ai`    | corrigé : un point de tête vaut wildcard                       |
+| `https://github.com/x` | `github.com`     | corrigé : seul l'hôte est retenu                               |
+| `*`                    | `*`              | tous les sites                                                 |
 
 `*google.com` n'est **pas** interprété comme un suffixe littéral : cela couvrirait
 aussi `evilgoogle.com`, transformant une faute de frappe en faille. Les motifs

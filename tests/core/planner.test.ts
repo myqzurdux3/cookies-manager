@@ -9,11 +9,11 @@ describe('sinceToTimestamp', () => {
     expect(sinceToTimestamp('all', NOW)).toBe(0);
   });
 
-  it('recule d\'une heure', () => {
+  it("recule d'une heure", () => {
     expect(sinceToTimestamp('hour', NOW)).toBe(NOW - 3_600_000);
   });
 
-  it('recule d\'une semaine', () => {
+  it("recule d'une semaine", () => {
     expect(sinceToTimestamp('week', NOW)).toBe(NOW - 7 * 86_400_000);
   });
 });

@@ -3,7 +3,9 @@ import { createProfileStore, DEFAULT_PROFILES } from '../../src/core/profiles';
 import type { StorageArea } from '../../src/core/profiles';
 import type { Profile } from '../../src/core/types';
 
-function fakeArea(initial: Record<string, unknown> = {}): StorageArea & { data: Record<string, unknown> } {
+function fakeArea(
+  initial: Record<string, unknown> = {},
+): StorageArea & { data: Record<string, unknown> } {
   const data = { ...initial };
   return {
     data,
@@ -136,7 +138,7 @@ describe('createProfileStore', () => {
     expect(await target.list()).toEqual([sample]);
   });
 
-  it('rejette un JSON qui n\'est pas une liste de profils', async () => {
+  it("rejette un JSON qui n'est pas une liste de profils", async () => {
     const store = createProfileStore(fakeArea({ profiles: [] }));
     await expect(store.importJson('{"nope": 1}')).rejects.toThrow('format de profils invalide');
   });
@@ -175,53 +177,70 @@ describe('createProfileStore', () => {
 
   it('rejette une règle de conservation invalide', async () => {
     const store = createProfileStore(fakeArea({ profiles: [] }));
-    const bad = JSON.stringify([{ ...sample, keepRules: [{ pattern: 'example.com', keep: { cookies: false } }] }]);
+    const bad = JSON.stringify([
+      { ...sample, keepRules: [{ pattern: 'example.com', keep: { cookies: false } }] },
+    ]);
     await expect(store.importJson(bad)).rejects.toThrow('règle de conservation invalide');
   });
 
   it('rejette une liste de cookies invalide', async () => {
     const store = createProfileStore(fakeArea({ profiles: [] }));
-    const bad = JSON.stringify([{ ...sample, keepRules: [{ pattern: 'example.com', keep: { cookies: true }, keepCookies: ['valid', 123] }] }]);
+    const bad = JSON.stringify([
+      {
+        ...sample,
+        keepRules: [
+          { pattern: 'example.com', keep: { cookies: true }, keepCookies: ['valid', 123] },
+        ],
+      },
+    ]);
     await expect(store.importJson(bad)).rejects.toThrow('liste de cookies invalide');
   });
 });
 
 describe('DEFAULT_PROFILES', () => {
-  it('n\'inclut jamais les mots de passe ni les formulaires', () => {
+  it("n'inclut jamais les mots de passe ni les formulaires", () => {
     for (const profile of DEFAULT_PROFILES) {
       expect(profile.categories).not.toContain('passwords');
       expect(profile.categories).not.toContain('formData');
     }
   });
 
-describe('validation de la forme des profils importés', () => {
-  // Supprimer ces six lignes de profiles.ts laissait les 198 tests verts.
-  const store = () => createProfileStore(fakeArea());
+  describe('validation de la forme des profils importés', () => {
+    // Supprimer ces six lignes de profiles.ts laissait les 198 tests verts.
+    const store = () => createProfileStore(fakeArea());
 
-  it('refuse un identifiant qui n’est pas une chaîne', async () => {
-    const json = JSON.stringify([{ id: 42, name: 'x', since: 'all', categories: [], keepRules: [] }]);
-    await expect(store().importJson(json)).rejects.toThrow(/format de profils invalide/);
-  });
+    it('refuse un identifiant qui n’est pas une chaîne', async () => {
+      const json = JSON.stringify([
+        { id: 42, name: 'x', since: 'all', categories: [], keepRules: [] },
+      ]);
+      await expect(store().importJson(json)).rejects.toThrow(/format de profils invalide/);
+    });
 
-  it('refuse un nom qui n’est pas une chaîne', async () => {
-    const json = JSON.stringify([{ id: 'a', name: null, since: 'all', categories: [], keepRules: [] }]);
-    await expect(store().importJson(json)).rejects.toThrow(/format de profils invalide/);
-  });
+    it('refuse un nom qui n’est pas une chaîne', async () => {
+      const json = JSON.stringify([
+        { id: 'a', name: null, since: 'all', categories: [], keepRules: [] },
+      ]);
+      await expect(store().importJson(json)).rejects.toThrow(/format de profils invalide/);
+    });
 
-  it('refuse des catégories qui ne sont pas un tableau', async () => {
-    const json = JSON.stringify([{ id: 'a', name: 'x', since: 'all', categories: 'cookies', keepRules: [] }]);
-    await expect(store().importJson(json)).rejects.toThrow(/format de profils invalide/);
-  });
+    it('refuse des catégories qui ne sont pas un tableau', async () => {
+      const json = JSON.stringify([
+        { id: 'a', name: 'x', since: 'all', categories: 'cookies', keepRules: [] },
+      ]);
+      await expect(store().importJson(json)).rejects.toThrow(/format de profils invalide/);
+    });
 
-  it('refuse une keep-list qui n’est pas un tableau', async () => {
-    const json = JSON.stringify([{ id: 'a', name: 'x', since: 'all', categories: [], keepRules: {} }]);
-    await expect(store().importJson(json)).rejects.toThrow(/format de profils invalide/);
-  });
+    it('refuse une keep-list qui n’est pas un tableau', async () => {
+      const json = JSON.stringify([
+        { id: 'a', name: 'x', since: 'all', categories: [], keepRules: {} },
+      ]);
+      await expect(store().importJson(json)).rejects.toThrow(/format de profils invalide/);
+    });
 
-  it('refuse un profil qui n’est pas un objet', async () => {
-    await expect(store().importJson(JSON.stringify(['pas un profil']))).rejects.toThrow(
-      /format de profils invalide/,
-    );
+    it('refuse un profil qui n’est pas un objet', async () => {
+      await expect(store().importJson(JSON.stringify(['pas un profil']))).rejects.toThrow(
+        /format de profils invalide/,
+      );
+    });
   });
-});
 });

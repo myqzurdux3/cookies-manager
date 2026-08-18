@@ -64,7 +64,10 @@ export function createEngine(
             };
           }
           try {
-            return { category: categoryPlan.category, preview: await cleaner.preview(categoryPlan) };
+            return {
+              category: categoryPlan.category,
+              preview: await cleaner.preview(categoryPlan),
+            };
           } catch (cause) {
             return {
               category: categoryPlan.category,
@@ -107,7 +110,10 @@ export function createEngine(
         }
 
         try {
-          results.push({ category: categoryPlan.category, report: await cleaner.clean(categoryPlan) });
+          results.push({
+            category: categoryPlan.category,
+            report: await cleaner.clean(categoryPlan),
+          });
         } catch (cause) {
           results.push({
             category: categoryPlan.category,

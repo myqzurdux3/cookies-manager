@@ -9,7 +9,8 @@ import {
 import type { CategoryPlan } from '../../src/core/planner';
 
 function fakeApi() {
-  const calls: { options: chrome.browsingData.RemovalOptions; types: Record<string, boolean> }[] = [];
+  const calls: { options: chrome.browsingData.RemovalOptions; types: Record<string, boolean> }[] =
+    [];
   return {
     calls,
     api: {
@@ -24,7 +25,11 @@ function fakeApi() {
 
 const knownHosts = async () => ['github.com', 'gist.github.com', 'example.com'];
 
-function plan(category: CategoryPlan['category'], keepRules: CategoryPlan['keepRules'], since = 0): CategoryPlan {
+function plan(
+  category: CategoryPlan['category'],
+  keepRules: CategoryPlan['keepRules'],
+  since = 0,
+): CategoryPlan {
   return { category, since, keepRules };
 }
 
@@ -36,7 +41,9 @@ describe('createStorageCleaner', () => {
   it('exclut les origines protégées, en http et en https', async () => {
     const { api, calls } = fakeApi();
     const cleaner = createStorageCleaner(api, 'localStorage', knownHosts);
-    await cleaner.clean(plan('localStorage', [{ pattern: 'github.com', keep: { localStorage: true } }]));
+    await cleaner.clean(
+      plan('localStorage', [{ pattern: 'github.com', keep: { localStorage: true } }]),
+    );
     expect(calls[0]!.options.excludeOrigins).toEqual(['https://github.com', 'http://github.com']);
     expect(calls[0]!.types).toEqual({ localStorage: true });
   });
@@ -44,14 +51,18 @@ describe('createStorageCleaner', () => {
   it('développe un motif à wildcard à partir des hôtes connus', async () => {
     const { api, calls } = fakeApi();
     const cleaner = createStorageCleaner(api, 'indexedDB', knownHosts);
-    await cleaner.clean(plan('indexedDB', [{ pattern: '*.github.com', keep: { indexedDB: true } }]));
+    await cleaner.clean(
+      plan('indexedDB', [{ pattern: '*.github.com', keep: { indexedDB: true } }]),
+    );
     expect(calls[0]!.options.excludeOrigins).toContain('https://gist.github.com');
     expect(calls[0]!.options.excludeOrigins).not.toContain('https://example.com');
   });
 
   it('transmet la période', async () => {
     const { api, calls } = fakeApi();
-    await createStorageCleaner(api, 'localStorage', knownHosts).clean(plan('localStorage', [], 1234));
+    await createStorageCleaner(api, 'localStorage', knownHosts).clean(
+      plan('localStorage', [], 1234),
+    );
     expect(calls[0]!.options.since).toBe(1234);
   });
 
@@ -72,7 +83,7 @@ describe('createStorageCleaner', () => {
     expect(report.countable).toBe(false);
   });
 
-  it('rend un statut échoué quand l\'API rejette', async () => {
+  it("rend un statut échoué quand l'API rejette", async () => {
     const api = {
       browsingData: {
         async remove() {
@@ -89,7 +100,7 @@ describe('createStorageCleaner', () => {
 });
 
 describe('createHttpCacheCleaner', () => {
-  it('n\'offre aucune finesse par site', () => {
+  it("n'offre aucune finesse par site", () => {
     expect(createHttpCacheCleaner(fakeApi().api).perSite).toBe('none');
   });
 
@@ -102,7 +113,7 @@ describe('createHttpCacheCleaner', () => {
     expect(calls[0]!.options).toEqual({ since: 42 });
   });
 
-  it('explique dans l\'aperçu que la conservation par site est impossible', async () => {
+  it("explique dans l'aperçu que la conservation par site est impossible", async () => {
     const preview = await createHttpCacheCleaner(fakeApi().api).preview(plan('httpCache', []));
     expect(preview.countable).toBe(false);
     expect(preview.note).toMatch(/tout ou rien/i);
@@ -110,7 +121,7 @@ describe('createHttpCacheCleaner', () => {
 });
 
 describe('createCredentialsCleaner', () => {
-  it('n\'offre aucune finesse par site', () => {
+  it("n'offre aucune finesse par site", () => {
     expect(createCredentialsCleaner(fakeApi().api, 'passwords').perSite).toBe('none');
   });
 
@@ -185,7 +196,7 @@ describe('chromeMajorVersion', () => {
     ).toBe(151);
   });
 
-  it("rend null quand la version est illisible, pour ne rien supposer", () => {
+  it('rend null quand la version est illisible, pour ne rien supposer', () => {
     expect(chromeMajorVersion('Mozilla/5.0 (compatible; inconnu)')).toBeNull();
   });
 });

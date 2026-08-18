@@ -34,7 +34,9 @@ function plan(keepRules: CategoryPlan['keepRules']): CategoryPlan {
 
 describe('cookieUrl', () => {
   it('construit une URL https pour un cookie sécurisé à domaine pointé', () => {
-    expect(cookieUrl({ domain: '.github.com', path: '/', secure: true })).toBe('https://github.com/');
+    expect(cookieUrl({ domain: '.github.com', path: '/', secure: true })).toBe(
+      'https://github.com/',
+    );
   });
 
   it('construit une URL http pour un cookie non sécurisé', () => {
@@ -49,13 +51,15 @@ describe('createCookiesCleaner', () => {
     expect(createCookiesCleaner(fakeApi([]).api).perSite).toBe('exact');
   });
 
-  it('compte exactement les cookies à supprimer dans l\'aperçu', async () => {
+  it("compte exactement les cookies à supprimer dans l'aperçu", async () => {
     const cleaner = createCookiesCleaner(fakeApi(COOKIES).api);
-    const preview = await cleaner.preview(plan([{ pattern: 'github.com', keep: { cookies: true } }]));
+    const preview = await cleaner.preview(
+      plan([{ pattern: 'github.com', keep: { cookies: true } }]),
+    );
     expect(preview).toMatchObject({ countable: true, items: 1 });
   });
 
-  it('signale dans l\'aperçu que la période ne s\'applique pas aux cookies', async () => {
+  it("signale dans l'aperçu que la période ne s'applique pas aux cookies", async () => {
     const cleaner = createCookiesCleaner(fakeApi(COOKIES).api);
     const preview = await cleaner.preview({ ...plan([]), since: 1_700_000_000_000 });
     expect(preview.note).toMatch(/période/i);

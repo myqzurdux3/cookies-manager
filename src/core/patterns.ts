@@ -11,8 +11,7 @@
  */
 
 export type PatternResult =
-  | { ok: true; pattern: string; changed: boolean }
-  | { ok: false; reason: string };
+  { ok: true; pattern: string; changed: boolean } | { ok: false; reason: string };
 
 const INVALID_CHARS = /[\s/\\@:?#]/;
 
@@ -57,7 +56,8 @@ export function normalizePattern(input: string): PatternResult {
   const body = pattern.startsWith('*.') ? pattern.slice(2) : pattern;
 
   if (body === '') return { ok: false, reason: 'motif sans domaine' };
-  if (body.includes('*')) return { ok: false, reason: 'le wildcard doit être en tête, sous la forme *.exemple.com' };
+  if (body.includes('*'))
+    return { ok: false, reason: 'le wildcard doit être en tête, sous la forme *.exemple.com' };
   if (INVALID_CHARS.test(body)) return { ok: false, reason: 'caractère interdit dans le motif' };
   if (body.startsWith('.') || body.endsWith('.') || body.includes('..')) {
     return { ok: false, reason: 'point mal placé dans le motif' };

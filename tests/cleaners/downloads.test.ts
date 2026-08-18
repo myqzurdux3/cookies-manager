@@ -58,7 +58,9 @@ describe('createDownloadsCleaner', () => {
 
   it('retombe sur url quand finalUrl est absent', async () => {
     const { api, erased } = fakeApi([{ id: 9, url: 'https://github.com/a.zip' }]);
-    await createDownloadsCleaner(api).clean(plan([{ pattern: 'github.com', keep: { downloads: true } }]));
+    await createDownloadsCleaner(api).clean(
+      plan([{ pattern: 'github.com', keep: { downloads: true } }]),
+    );
     expect(erased).toEqual([]);
   });
 
@@ -71,7 +73,11 @@ describe('createDownloadsCleaner', () => {
 
   it('borne la recherche dans le temps quand la période le demande', async () => {
     const { api, queries } = fakeApi(ITEMS);
-    await createDownloadsCleaner(api).clean({ category: 'downloads', since: 86_400_000, keepRules: [] });
+    await createDownloadsCleaner(api).clean({
+      category: 'downloads',
+      since: 86_400_000,
+      keepRules: [],
+    });
     expect(queries[0]!.limit).toBe(0);
     expect(queries[0]!.startedAfter).toBe(new Date(86_400_000).toISOString());
   });

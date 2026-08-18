@@ -42,7 +42,9 @@ let settings: Settings = { vaultEnabled: false, vaultRetentionDays: 7 };
 async function ensurePermissions(profile: Profile): Promise<boolean> {
   const needed = profile.categories
     .map((category) => OPTIONAL[category])
-    .filter((permission): permission is chrome.runtime.ManifestPermissions => permission !== undefined);
+    .filter(
+      (permission): permission is chrome.runtime.ManifestPermissions => permission !== undefined,
+    );
   if (needed.length === 0) return true;
   return chrome.permissions.request({ permissions: needed });
 }
@@ -142,7 +144,10 @@ async function runClean(): Promise<void> {
 
   const needsPassphrase = !vaultEl.hidden;
   if (needsPassphrase && passphraseInput.value === '') {
-    renderMessage(previewList, "Phrase secrète requise : le coffre est actif, rien n'a été supprimé.");
+    renderMessage(
+      previewList,
+      "Phrase secrète requise : le coffre est actif, rien n'a été supprimé.",
+    );
     return;
   }
 

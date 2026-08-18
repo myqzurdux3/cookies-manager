@@ -21,7 +21,9 @@ export interface SettingsStore {
 }
 
 function isValidRetention(days: unknown): days is number {
-  return typeof days === 'number' && Number.isInteger(days) && days >= 1 && days <= MAX_RETENTION_DAYS;
+  return (
+    typeof days === 'number' && Number.isInteger(days) && days >= 1 && days <= MAX_RETENTION_DAYS
+  );
 }
 
 function validate(settings: Settings): void {
