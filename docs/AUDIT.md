@@ -648,6 +648,16 @@ ouvert.
   défaut de `hidden` pourrait revenir sous une autre forme sans que rien ne
   sonne.
 
+### Prochaine étape prévue
+
+Une release `v0.1.0` est souhaitée, sans date. Elle demande : figer la version,
+poser un tag, écrire un `CHANGELOG.md`, et attacher un zip de `dist/`. Pour une
+publication sur le Chrome Web Store, il faudrait en plus une politique de
+confidentialité — la boutique l'exige dès qu'une extension touche aux données de
+navigation.
+
+Rien de tout cela n'est fait à ce jour.
+
 ### Les trois décisions de produit, tranchées
 
 Elles l'ont été par le propriétaire du dépôt après l'audit :
