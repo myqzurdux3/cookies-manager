@@ -571,23 +571,37 @@ _regarder une image_ pour le voir. C'est la limite exacte de tout ce qui
 précède, et elle mérite d'être retenue : un test qui n'observe pas le rendu ne
 dit rien du rendu.
 
-### La CI, débogage en trois passages
+### La CI, ou ce que « ça marche chez moi » cache
 
-Le workflow n'avait jamais tourné. Le job `browser` a échoué trois fois, chaque
-échec révélant un défaut réel du script de vérification, invisible en local :
+Le workflow n'avait jamais tourné. Le job `browser` a échoué plusieurs fois
+d'affilée, et **chaque échec a révélé un défaut réel du script de vérification**,
+tous invisibles sur la machine où il avait été écrit :
 
 1. **`fetch failed` en 2,6 s.** Chrome refuse de démarrer sans `--no-sandbox`
    dans un conteneur, et `/dev/shm` y est trop petit. L'attente du port était
-   par ailleurs un `sleep` fixe calibré sur une machine locale.
+   par ailleurs un `sleep` fixe calibré en local.
 2. **`Cannot read properties of undefined (reading 'set')`.** Le service worker
    apparaît dans la liste des cibles avant que `chrome.cookies` y soit lié.
 3. **Les API ne devenaient jamais disponibles.** S'attacher à un worker par le
-   protocole DevTools le laisse suspendu en attente du débogueur : il n'exécute
-   rien. En local le worker était déjà réveillé par l'ouverture d'une page de
-   l'extension avant l'attachement, ce qui masquait le problème.
+   protocole DevTools le laisse suspendu en attente du débogueur. En local le
+   worker était déjà réveillé avant l'attachement, ce qui masquait le problème.
+4. **Toujours pas.** Le script retenait la première cible `chrome-extension://`
+   trouvée — sur l'exécuteur, une extension interne de Chrome. L'identifiant se
+   calcule pourtant depuis le chemin du dossier : SHA-256, 128 premiers bits,
+   quartets mappés sur `a`..`p`.
+5. **Zéro cible `chrome-extension://`.** Le diagnostic ajouté à ce passage a
+   tranché : l'extension ne se chargeait pas du tout. Chrome 137 a désactivé
+   `--load-extension`. Brave 150, utilisé en local, l'applique encore — d'où
+   l'écart.
+6. **`Extensions.loadUnpacked` accepté, extension toujours invisible.** La
+   commande attribue son propre identifiant, que le script jetait au profit de
+   celui calculé. Il ouvrait donc la page d'une extension inexistante.
 
-Les trois corrections rendent le script utilisable ailleurs que sur la machine
-où il a été écrit — ce qui était tout l'intérêt de le mettre dans le dépôt.
+Ce n'est pas une anecdote d'outillage. Un script de vérification qui ne tourne
+que sur une machine ne vérifie rien de reproductible, et **cinq de ces six
+défauts venaient d'hypothèses tacites sur le temps ou sur l'environnement** —
+exactement le genre d'hypothèse que le reste de cet audit a passé son temps à
+débusquer dans le code de l'extension.
 
 ### État final
 

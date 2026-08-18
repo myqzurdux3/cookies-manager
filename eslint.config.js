@@ -30,6 +30,7 @@ export default tseslint.config(
         WebSocket: 'readonly',
         AbortSignal: 'readonly',
         setTimeout: 'readonly',
+        clearTimeout: 'readonly',
         URL: 'readonly',
         Buffer: 'readonly',
       },

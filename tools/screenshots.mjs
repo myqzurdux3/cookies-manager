@@ -70,8 +70,13 @@ async function cdp(wsUrl) {
   });
   let id = 1;
   const pending = new Map();
+  const ecouteurs = [];
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
+    if (m.id === undefined) {
+      for (const fn of ecouteurs) fn(m);
+      return;
+    }
     const p = pending.get(m.id);
     if (!p) return;
     pending.delete(m.id);
@@ -83,6 +88,18 @@ async function cdp(wsUrl) {
       const n = id++;
       ws.send(JSON.stringify({ id: n, method, params }));
       return new Promise((res, rej) => pending.set(n, { res, rej }));
+    },
+    /** Attend un événement du protocole, ou rend la main au bout du délai. */
+    attendre(methode, timeoutMs = 15000) {
+      return new Promise((res) => {
+        const fin = setTimeout(() => res(false), timeoutMs);
+        ecouteurs.push((m) => {
+          if (m.method === methode) {
+            clearTimeout(fin);
+            res(true);
+          }
+        });
+      });
     },
     close: () => ws.close(),
   };
@@ -160,6 +177,21 @@ async function chargerExtension(chemin) {
 async function extensionVisible(extensionId) {
   const cibles = await targets().catch(() => []);
   return cibles.some((t) => t.url.startsWith(`chrome-extension://${extensionId}/`));
+}
+
+/**
+ * Charge une page de l'extension dans une cible et attend son chargement.
+ *
+ * S'attacher à une cible fraîchement ouverte donne parfois le contexte de la
+ * page vide qui la précède : `chrome.*` n'y existe pas, et attendre ne change
+ * rien puisque le contexte, lui, ne change plus.
+ */
+async function ouvrirPage(client, url) {
+  await client.send('Page.enable');
+  const charge = client.attendre('Page.loadEventFired');
+  await client.send('Page.navigate', { url });
+  await charge;
+  await client.send('Runtime.enable');
 }
 
 async function evaluate(client, expression) {
@@ -288,7 +320,7 @@ try {
     'options.html',
   );
   const swClient = await cdp(amorce.webSocketDebuggerUrl);
-  await swClient.send('Runtime.enable');
+  await ouvrirPage(swClient, `chrome-extension://${extensionId}/options.html`);
   await attendrePret(swClient);
 
   // Des données fabriquées, sur des domaines réservés aux tests.
@@ -323,8 +355,7 @@ try {
     extensionId,
   );
   const popupClient = await cdp(popup.webSocketDebuggerUrl);
-  await popupClient.send('Page.enable');
-  await popupClient.send('Runtime.enable');
+  await ouvrirPage(popupClient, `chrome-extension://${extensionId}/popup.html`);
   await sleep(900);
   // Ouvrir l'aperçu du premier profil : c'est l'écran qui montre le produit.
   await evaluate(popupClient, `document.querySelector('#profiles button').click(); return true;`);
@@ -342,8 +373,7 @@ try {
     'options.html',
   );
   const optionsClient = await cdp(options.webSocketDebuggerUrl);
-  await optionsClient.send('Page.enable');
-  await optionsClient.send('Runtime.enable');
+  await ouvrirPage(optionsClient, `chrome-extension://${extensionId}/options.html`);
   await sleep(1200);
   await evaluate(
     optionsClient,
