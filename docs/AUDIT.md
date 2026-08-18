@@ -644,6 +644,26 @@ ouvert.
   main par `npm run screenshots` ; aucune comparaison d'image n'existe. Le
   défaut de `hidden` pourrait revenir sous une autre forme sans que rien ne
   sonne.
-- **Les trois décisions de produit restent ouvertes** : coffre écrasé par un
-  nouveau nettoyage, cookies partitionnés hors de portée, cache HTTP filtrable
-  par origine mais sur l'URL de la ressource.
+
+### Les trois décisions de produit, tranchées
+
+Elles l'ont été par le propriétaire du dépôt après l'audit :
+
+| Décision                               | Choix                                                                                                                            | Commit    |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| Coffre écrasé par un nouveau nettoyage | **Avertir** dans la popup, avec la date et le nombre de cookies du coffre existant. L'écrasement reste possible, le silence non. | `75a9d08` |
+| Cookies cloisonnés (CHIPS)             | **Le dire** dans l'aperçu. Les supprimer demanderait d'énumérer les cloisons, ce que l'API ne permet pas.                        | `0898b6a` |
+| Cache HTTP filtrable par origine       | **L'implémenter avec un avertissement explicite** sur ce qui n'est pas préservé. Le cache rejoint la grille de la keep-list.     | `19a0de9` |
+
+Le point CHIPS a été vérifié dans le navigateur avant de trancher, sur un cookie
+normal et un cookie cloisonné posés sur le même domaine :
+
+```
+getAll({})                            → ["normal@discord.test"]
+getAll({partitionKey: google.test})   → ["partitionne@discord.test"]
+nettoyage total, aucune keep-list     → deleted: 1, kept: 0
+après                                  → visibles [] · dans la cloison ["partitionne"]
+```
+
+Un nettoyage total laisse donc ces cookies intacts, indépendamment de toute
+keep-list.
