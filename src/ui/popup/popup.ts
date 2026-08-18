@@ -78,6 +78,10 @@ function renderMessage(list: HTMLUListElement, message: string): void {
   renderRows(list, [{ label: message, value: '', tone: 'failed' }]);
 }
 
+function reason(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
+}
+
 async function showPreview(profile: Profile): Promise<void> {
   selected = profile;
   reportEl.hidden = true;
@@ -89,7 +93,18 @@ async function showPreview(profile: Profile): Promise<void> {
     return;
   }
 
-  const results = (await send({ type: 'PREVIEW', profileId: profile.id })) as PreviewResult[];
+  let results: PreviewResult[];
+  try {
+    results = (await send({ type: 'PREVIEW', profileId: profile.id })) as PreviewResult[];
+  } catch (cause) {
+    // Sans ce filet, l'échec restait un rejet non capturé : la popup gardait
+    // l'écran précédent et l'utilisateur n'apprenait jamais ce qui s'est passé.
+    renderMessage(previewList, `Aperçu impossible : ${reason(cause)}`);
+    chooserEl.hidden = true;
+    previewEl.hidden = false;
+    confirmBtn.disabled = true;
+    return;
+  }
   renderRows(previewList, results.map(previewRow));
 
   const risky = needsExtraConfirmation(profile.categories);
@@ -125,11 +140,21 @@ confirmBtn.addEventListener('click', async () => {
 
   const profile = selected;
   confirmBtn.disabled = true;
-  const results = (await send({
-    type: 'CLEAN',
-    profileId: profile.id,
-    passphrase: needsPassphrase ? passphraseInput.value : undefined,
-  })) as CategoryResult[];
+
+  let results: CategoryResult[];
+  try {
+    results = (await send({
+      type: 'CLEAN',
+      profileId: profile.id,
+      passphrase: needsPassphrase ? passphraseInput.value : undefined,
+    })) as CategoryResult[];
+  } catch (cause) {
+    // Le bouton vient d'être désactivé : sans réactivation, la popup est morte
+    // jusqu'à sa fermeture, sans que rien n'explique pourquoi.
+    renderMessage(previewList, `Nettoyage impossible : ${reason(cause)}`);
+    confirmBtn.disabled = false;
+    return;
+  }
 
   passphraseInput.value = '';
   previewEl.hidden = true;
@@ -157,8 +182,17 @@ doneBtn.addEventListener('click', () => {
 });
 
 async function init(): Promise<void> {
-  settings = (await send({ type: 'GET_SETTINGS' })) as Settings;
-  const profiles = (await send({ type: 'LIST_PROFILES' })) as Profile[];
+  let profiles: Profile[];
+  try {
+    settings = (await send({ type: 'GET_SETTINGS' })) as Settings;
+    profiles = (await send({ type: 'LIST_PROFILES' })) as Profile[];
+  } catch (cause) {
+    renderMessage(previewList, `Service worker injoignable : ${reason(cause)}`);
+    chooserEl.hidden = true;
+    previewEl.hidden = false;
+    confirmBtn.disabled = true;
+    return;
+  }
 
   profilesEl.replaceChildren(
     ...profiles.map((profile) => {
