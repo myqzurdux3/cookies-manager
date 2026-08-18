@@ -637,6 +637,9 @@ ouvert.
 
 ### Ce qui reste vrai
 
+- **La recette manuelle n'a pas été rejouée après les trois décisions de
+  produit.** Trois scénarios ont été ajoutés (coffre annoncé, cookies cloisonnés,
+  cache partiel) et aucun n'a été exécuté par un humain.
 - **`background.ts` n'est couvert par aucun test unitaire.** Il ne contient plus
   que du câblage, mais la restauration des cookies et la sauvegarde du coffre y
   vivent encore et ne sont exercées que par le script en navigateur.

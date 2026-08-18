@@ -50,7 +50,7 @@ cette suppression depuis la version 144.
 Attendu : le navigateur demande la permission ; un refus affiche un message
 d'échec sans rien supprimer.
 
-## Scénario 5 bis — le coffre protège d'une keep-list mal réglée
+## Scénario 5 — le coffre protège d'une keep-list mal réglée
 
 1. Options → cocher « Sauvegarder les cookies avant suppression », enregistrer.
 2. Lancer un nettoyage des cookies **sans** protéger `github.com`, en saisissant
@@ -68,13 +68,13 @@ Attendu : message « phrase incorrecte », aucun cookie restauré.
 
 Attendu : les réglages sont refusés avec un message sur la rétention.
 
-## Scénario 5 ter — pas de suppression sans sauvegarde
+## Scénario 6 — pas de suppression sans sauvegarde
 
 1. Coffre actif, lancer un nettoyage des cookies en laissant la phrase vide.
 
 Attendu : la popup refuse et annonce que rien n'a été supprimé.
 
-## Scénario 5 quater — le récap dit ce qui est parti
+## Scénario 7 — le récap dit ce qui est parti
 
 1. Lancer un nettoyage sur un profil incluant cookies, historique et cache HTTP,
    avec au moins un site dans la keep-list.
@@ -83,7 +83,7 @@ Attendu : le bandeau de total additionne les suppressions, le cache HTTP
 s'affiche « vidé entièrement » et non « 0 supprimé », et les sites protégés
 apparaissent en pastilles sous « Sites épargnés ».
 
-## Scénario 7 — la suppression du coffre demande une confirmation
+## Scénario 8 — la suppression du coffre demande une confirmation
 
 1. Options → « Supprimer le coffre ».
 
@@ -94,7 +94,7 @@ l'annonce, et rien n'est supprimé.
 
 Attendu : le coffre est supprimé, le bouton revient à son libellé d'origine.
 
-## Scénario 8 — une erreur du service worker se voit
+## Scénario 9 — une erreur du service worker se voit
 
 1. `chrome://extensions` → arrêter le service worker de l'extension, puis
    ouvrir la popup et enchaîner rapidement sur un aperçu.
@@ -102,7 +102,41 @@ Attendu : le coffre est supprimé, le bouton revient à son libellé d'origine.
 Attendu : en cas d'échec, la popup affiche la cause au lieu de rester figée, et
 le bouton « Nettoyer » reste utilisable pour réessayer.
 
-## Scénario 6 — le journal enregistre
+## Scénario 10 — le coffre existant est annoncé avant d'être remplacé
+
+1. Coffre actif. Lancer un nettoyage des cookies avec une phrase secrète.
+2. Relancer un aperçu sur le même profil.
+
+Attendu : sous le champ de phrase, un avertissement en rouge nomme la date du
+coffre existant et son nombre de cookies, et invite à restaurer d'abord.
+
+3. Options → « Supprimer le coffre », confirmer. Relancer un aperçu.
+
+Attendu : l'avertissement a disparu.
+
+## Scénario 11 — les cookies cloisonnés sont annoncés
+
+1. Ouvrir un site qui intègre un service tiers posant un cookie cloisonné.
+2. Lancer un aperçu sur un profil incluant les cookies.
+
+Attendu : la ligne « Cookies » porte une note expliquant que les cookies
+cloisonnés par site ne sont pas traités et survivront au nettoyage. C'est une
+limite de l'API, pas un défaut à corriger — voir `limites-navigateur.md`.
+
+## Scénario 12 — le cache HTTP se protège par site, partiellement
+
+1. Options → cocher **Cache** pour un site de la keep-list, enregistrer.
+2. Lancer un aperçu.
+
+Attendu : la ligne « Cache HTTP » avertit que l'exclusion porte sur l'URL de la
+ressource et non sur le site visité.
+
+3. Nettoyer, puis recharger le site protégé, onglet réseau ouvert.
+
+Attendu : ses propres ressources viennent du cache ; ce qu'il charge depuis un
+domaine tiers est retéléchargé. C'est le comportement annoncé, pas un défaut.
+
+## Scénario 13 — le journal enregistre
 
 1. Après un nettoyage, ouvrir la console du service worker.
 2. Lire `chrome.storage.local.get('runs')`.

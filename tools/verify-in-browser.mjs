@@ -470,6 +470,35 @@ try {
   check('choisir un profil remplace la liste par l’aperçu', bascule === 'true,true', bascule);
   popupClient.close();
 
+  // --- La popup annonce qu'un coffre existant sera remplacé ---
+  // Le coffre vient d'être écrit par le nettoyage ci-dessus : une popup neuve
+  // doit donc l'annoncer avant d'en écrire un second par-dessus.
+  await fetch(`http://127.0.0.1:${PORT}/json/new?chrome-extension://${extensionId}/popup.html`, {
+    method: 'PUT',
+  });
+  const popup2 = await waitFor(
+    (t) => t.type === 'page' && t.url.endsWith('popup.html') && t.id !== popupPage.id,
+    extensionId,
+  );
+  const popupClient2 = await cdp(popup2.webSocketDebuggerUrl);
+  await ouvrirPage(popupClient2, `chrome-extension://${extensionId}/popup.html`);
+  await sleep(900);
+
+  const avertissement = await evaluate(
+    popupClient2,
+    `document.querySelector('#profiles button').click();
+     await new Promise((r) => setTimeout(r, 800));
+     const el = document.querySelector('#vault-existing');
+     return JSON.stringify({ masque: el.hidden, texte: el.textContent ?? '' });`,
+  );
+  const vu = JSON.parse(avertissement);
+  check(
+    'un coffre existant est annoncé avant d’être remplacé',
+    vu.masque === false && /remplac/i.test(vu.texte),
+    vu.masque ? 'aucun avertissement affiché' : vu.texte.slice(0, 60),
+  );
+  popupClient2.close();
+
   // --- Le routeur rejette ce qu'il ne connaît pas ---
   const inconnu = await send({ type: 'MESSAGE_QUI_N_EXISTE_PAS' });
   check('un message inconnu est rejeté', inconnu.ok === false, inconnu.error);
