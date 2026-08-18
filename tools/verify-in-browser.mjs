@@ -262,6 +262,43 @@ try {
     JSON.stringify(bonne.data ?? bonne.error),
   );
 
+  // --- La popup masque vraiment ce qu'elle déclare masqué ---
+  // L'attribut `hidden` ne tient que par une règle de la feuille du navigateur,
+  // qu'une règle d'auteur écrase sans bruit. Seul un vrai navigateur le voit.
+  await fetch(`http://127.0.0.1:${PORT}/json/new?chrome-extension://${extensionId}/popup.html`, {
+    method: 'PUT',
+  });
+  const popupPage = await waitFor(
+    (t) => t.type === 'page' && t.url.endsWith('popup.html'),
+    extensionId,
+  );
+  const popupClient = await cdp(popupPage.webSocketDebuggerUrl);
+  await popupClient.send('Runtime.enable');
+  await sleep(800);
+
+  const masques = await evaluate(
+    popupClient,
+    `const style = (sel) => getComputedStyle(document.querySelector(sel)).display;
+     return [style('#preview'), style('#report'), style('#danger'), style('#vault')].join(',');`,
+  );
+  check(
+    'la popup masque aperçu, rapport et encarts au chargement',
+    masques === 'none,none,none,none',
+    masques,
+  );
+
+  const bascule = await evaluate(
+    popupClient,
+    `document.querySelector('#profiles button').click();
+     await new Promise((r) => setTimeout(r, 600));
+     return [
+       getComputedStyle(document.querySelector('#chooser')).display === 'none',
+       getComputedStyle(document.querySelector('#preview')).display !== 'none',
+     ].join(',');`,
+  );
+  check('choisir un profil remplace la liste par l’aperçu', bascule === 'true,true', bascule);
+  popupClient.close();
+
   // --- Le routeur rejette ce qu'il ne connaît pas ---
   const inconnu = await send({ type: 'MESSAGE_QUI_N_EXISTE_PAS' });
   check('un message inconnu est rejeté', inconnu.ok === false, inconnu.error);

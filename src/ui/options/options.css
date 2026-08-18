@@ -103,14 +103,19 @@ h3 {
   gap: 4px 16px;
 }
 .checks label {
-  display: flex;
+  display: grid;
+  /* Case, libellé, puis la note d'avertissement sur sa propre ligne : sur une
+     seule ligne elle comprimait le libellé jusqu'à le couper en deux. */
+  grid-template-columns: auto 1fr;
   align-items: center;
-  gap: 8px;
+  gap: 2px 8px;
   padding: 3px 0;
 }
 .checks .danger-note {
+  grid-column: 2;
   color: var(--danger);
   font-size: 12px;
+  line-height: 1.35;
 }
 
 /* --- Grille de keep-list --- */

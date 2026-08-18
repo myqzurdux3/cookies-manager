@@ -125,6 +125,15 @@ input[type='checkbox'] {
   border-color: var(--accent);
 }
 
+/* L'attribut `hidden` ne tient que par une règle de la feuille du navigateur,
+   `[hidden] { display: none }`, que n'importe quelle règle d'auteur écrase —
+   `section { display: flex }` suffisait à faire réapparaître tous les écrans
+   masqués de la popup. `!important` est le seul moyen de rendre l'attribut
+   fiable quel que soit le sélecteur qui fixe `display` par ailleurs. */
+[hidden] {
+  display: none !important;
+}
+
 .hint {
   color: var(--muted);
   font-size: 12px;
