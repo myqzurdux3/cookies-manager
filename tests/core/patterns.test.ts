@@ -92,4 +92,41 @@ describe('le motif normalisé protège vraiment', () => {
     expect(matchesPattern('evilgoogle.com', pattern)).toBe(false);
     expect(matchesPattern('google.com.attaquant.net', pattern)).toBe(false);
   });
+
+describe('noms de domaine internationalisés', () => {
+  // Chrome rend les hôtes en punycode (cookie.domain, URL.hostname). Un motif
+  // laissé en unicode ne correspondrait à rien et ne protégerait rien, en
+  // silence — le mode de défaillance que ce module existe pour empêcher.
+  it('convertit un motif unicode en punycode', () => {
+    const result = normalizePattern('münchen.de');
+    expect(result).toMatchObject({ ok: true, pattern: 'xn--mnchen-3ya.de', changed: true });
+  });
+
+  it('convertit aussi sous un wildcard', () => {
+    expect(normalizePattern('*.münchen.de')).toMatchObject({
+      ok: true,
+      pattern: '*.xn--mnchen-3ya.de',
+    });
+  });
+
+  it('laisse un motif déjà en punycode intact', () => {
+    expect(normalizePattern('xn--mnchen-3ya.de')).toMatchObject({
+      ok: true,
+      pattern: 'xn--mnchen-3ya.de',
+      changed: false,
+    });
+  });
+
+  it('normalise les caractères pleine chasse', () => {
+    expect(normalizePattern('ＧＩＴＨＵＢ.ｃｏｍ')).toMatchObject({ ok: true, pattern: 'github.com' });
+  });
+
+  it('normalise le point idéographique en point ordinaire', () => {
+    expect(normalizePattern('github\u3002com')).toMatchObject({ ok: true, pattern: 'github.com' });
+  });
+
+  it('refuse un motif que le navigateur ne sait pas interpréter', () => {
+    expect(normalizePattern('xn--')).toMatchObject({ ok: false });
+  });
+});
 });

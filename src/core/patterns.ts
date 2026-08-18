@@ -16,6 +16,24 @@ export type PatternResult =
 
 const INVALID_CHARS = /[\s/\\@:?#]/;
 
+/**
+ * Forme punycode d'un hôte, ou `null` si le navigateur ne sait pas l'interpréter.
+ *
+ * Chrome rend toujours des hôtes en punycode — `cookie.domain` comme
+ * `URL.hostname`. Un motif laissé en unicode ne correspondrait donc jamais à
+ * rien et ne protégerait rien, sans le dire. `new URL` applique au passage la
+ * normalisation IDNA du navigateur : caractères pleine chasse et point
+ * idéographique compris, exactement comme la barre d'adresse.
+ */
+function toPunycode(host: string): string | null {
+  try {
+    const { hostname } = new URL(`http://${host}`);
+    return hostname === '' ? null : hostname;
+  } catch {
+    return null;
+  }
+}
+
 export function normalizePattern(input: string): PatternResult {
   const original = input.trim().toLowerCase();
   if (original === '') return { ok: false, reason: 'motif vide' };
@@ -45,5 +63,9 @@ export function normalizePattern(input: string): PatternResult {
     return { ok: false, reason: 'point mal placé dans le motif' };
   }
 
+  const ascii = toPunycode(body);
+  if (ascii === null) return { ok: false, reason: 'nom de domaine impossible à interpréter' };
+
+  pattern = pattern.startsWith('*.') ? `*.${ascii}` : ascii;
   return { ok: true, pattern, changed: pattern !== original };
 }
