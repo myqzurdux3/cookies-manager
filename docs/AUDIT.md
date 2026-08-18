@@ -435,8 +435,9 @@ Révisé après la phase 7 : ce qui a pu être vérifié par machine l'a été.
    avec des cookies fabriqués sur des domaines `.test`. Un cookie de session
    réel porte des attributs — `__Host-`, `SameSite`, `Partitioned` — que mes
    cookies de test n'avaient pas.
-6. **Décider du sort de `docs/superpowers/`** (3728 lignes d'archives) et de
-   `AUDIT.md`, qui n'a pas vocation à vivre éternellement à la racine.
+6. **Décider du sort de `docs/superpowers/`** (3728 lignes d'archives) et de ce
+   rapport lui-même, qui a vocation à être archivé une fois ses décisions
+   tranchées.
 7. **Surveiller la CI au premier push.** Elle n'a jamais tourné sur GitHub. Le
    job `browser` suppose un Chrome présent sur l'exécuteur, et le job `icons`
    dépend de la version de Pillow.

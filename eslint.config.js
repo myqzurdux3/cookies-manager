@@ -31,6 +31,7 @@ export default tseslint.config(
         AbortSignal: 'readonly',
         setTimeout: 'readonly',
         URL: 'readonly',
+        Buffer: 'readonly',
       },
     },
   },

@@ -32,6 +32,11 @@ lance les mêmes.
   Les contraintes d'API, les compromis et les pièges méritent un commentaire ;
   la paraphrase du code, non.
 
+## L'audit
+
+[docs/AUDIT.md](docs/AUDIT.md) recense ce qui a été vérifié, ce qui ne l'a pas
+été, et pourquoi. À lire avant de conclure qu'un comportement est intentionnel.
+
 ## Limites du navigateur
 
 Avant d'ajouter ou de modifier une catégorie de nettoyage, lire
@@ -54,6 +59,12 @@ Ce script ne vérifie rien de visuel.
 Les tests unitaires ne touchent aucun navigateur, et le script ci-dessus ne voit
 rien de l'interface. Avant de publier, jouer
 [docs/recette-manuelle.md](docs/recette-manuelle.md) sur un profil Chrome dédié.
+
+## Captures d'écran
+
+`node tools/screenshots.mjs` régénère les images du README depuis le `dist/`
+courant, en clair et en sombre, avec des données fabriquées sur des domaines
+`.test`. À relancer après toute modification de l'interface.
 
 ## Icônes
 

@@ -1,6 +1,6 @@
 > **Archive de conception.** Ce document décrit l'intention d'origine du projet,
 > pas son comportement actuel. Plusieurs de ses hypothèses sur les API Chrome se
-> sont révélées fausses — voir [AUDIT.md](../../../AUDIT.md) et
+> sont révélées fausses — voir [AUDIT.md](../../AUDIT.md) et
 > [docs/limites-navigateur.md](../../limites-navigateur.md). À lire comme une
 > archive, jamais comme une référence.
 

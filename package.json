@@ -8,6 +8,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "verify:browser": "node tools/verify-in-browser.mjs",
+    "screenshots": "node tools/screenshots.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
