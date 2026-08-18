@@ -57,4 +57,4 @@ Voir [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licence
 
-À définir — voir [LICENSE](LICENSE).
+MIT — voir [LICENSE](LICENSE).

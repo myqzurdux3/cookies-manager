@@ -31,7 +31,14 @@ export const COLUMNS: Column[] = [
   },
   { key: 'history', label: 'Historique', categories: ['history'] },
   { key: 'downloads', label: 'Téléchargements', categories: ['downloads'] },
-  { key: 'siteSettings', label: 'Autorisations', categories: ['siteSettings'] },
+  {
+    key: 'siteSettings',
+    label: 'Autorisations',
+    categories: ['siteSettings'],
+    hint:
+      'Portée limitée : une extension ne peut retirer que ses propres règles, jamais les ' +
+      'autorisations que vous avez accordées vous-même dans Chrome.',
+  },
 ];
 
 /** Catégories que l'API ne sait pas exclure par site : hors tableau, dans leur propre bloc. */

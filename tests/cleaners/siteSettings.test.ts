@@ -92,7 +92,8 @@ describe('createSiteSettingsCleaner', () => {
     const preview = await createSiteSettingsCleaner(fakeApi().api).preview(
       plan([{ pattern: '*.github.com', keep: { cookies: true } }]),
     );
-    expect(preview.note).toBeUndefined();
+    // La note de portée reste : elle décrit la catégorie, pas les règles.
+    expect(preview.note).not.toMatch(/wildcard/i);
   });
 
   it("compte les sites protégés restaurables dans l'aperçu", async () => {
@@ -103,5 +104,22 @@ describe('createSiteSettingsCleaner', () => {
       ]),
     );
     expect(preview.items).toBe(2);
+  });
+
+  it("dit dans l'aperçu ce que la catégorie ne peut pas faire", async () => {
+    const preview = await createSiteSettingsCleaner(fakeApi().api).preview(
+      plan([{ pattern: 'github.com', keep: { siteSettings: true } }]),
+    );
+    // contentSettings.clear() n'efface que les règles posées par cette
+    // extension : laisser croire à une suppression serait mensonger.
+    expect(preview.note).toMatch(/posés par cette extension/i);
+  });
+
+  it("garde l'avertissement wildcard en plus, sans perdre le premier", async () => {
+    const preview = await createSiteSettingsCleaner(fakeApi().api).preview(
+      plan([{ pattern: '*.github.com', keep: { siteSettings: true } }]),
+    );
+    expect(preview.note).toMatch(/posés par cette extension/i);
+    expect(preview.note).toMatch(/wildcard/i);
   });
 });
