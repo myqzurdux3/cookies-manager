@@ -20,8 +20,15 @@ function isDeletable(item: DownloadItem, plan: CategoryPlan): boolean {
   return !isProtected(host, 'downloads', plan.keepRules);
 }
 
+/**
+ * `limit: 0` lève le plafond : sans lui, `chrome.downloads.search` s'arrête à
+ * 1000 entrées et les plus anciennes ne sont ni comptées ni effacées, en
+ * silence — le pire résultat pour un outil de suppression.
+ */
 function query(plan: CategoryPlan): object {
-  return plan.since === 0 ? {} : { startedAfter: new Date(plan.since).toISOString() };
+  return plan.since === 0
+    ? { limit: 0 }
+    : { limit: 0, startedAfter: new Date(plan.since).toISOString() };
 }
 
 export function createDownloadsCleaner(api: DownloadsApi): Cleaner {
