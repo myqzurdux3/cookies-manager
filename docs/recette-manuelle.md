@@ -36,6 +36,12 @@ Attendu : les cookies de `gist.github.com` survivent aussi.
 Attendu : le bouton « Nettoyer » est désactivé tant que la case de
 confirmation rouge n'est pas cochée.
 
+3. Sur Chrome 144 ou plus récent, lancer quand même le nettoyage.
+
+Attendu : la ligne « Mots de passe » rapporte un échec explicite renvoyant vers
+les paramètres de Chrome — et non « vidé entièrement ». Le navigateur ignore
+cette suppression depuis la version 144.
+
 ## Scénario 4 — les permissions optionnelles sont demandées
 
 1. Retirer la permission `history` dans `chrome://extensions` → détails.
@@ -76,6 +82,25 @@ Attendu : la popup refuse et annonce que rien n'a été supprimé.
 Attendu : le bandeau de total additionne les suppressions, le cache HTTP
 s'affiche « vidé entièrement » et non « 0 supprimé », et les sites protégés
 apparaissent en pastilles sous « Sites épargnés ».
+
+## Scénario 7 — la suppression du coffre demande une confirmation
+
+1. Options → « Supprimer le coffre ».
+
+Attendu : le bouton passe à « Confirmer la suppression », un message rouge
+l'annonce, et rien n'est supprimé.
+
+2. Cliquer une seconde fois.
+
+Attendu : le coffre est supprimé, le bouton revient à son libellé d'origine.
+
+## Scénario 8 — une erreur du service worker se voit
+
+1. `chrome://extensions` → arrêter le service worker de l'extension, puis
+   ouvrir la popup et enchaîner rapidement sur un aperçu.
+
+Attendu : en cas d'échec, la popup affiche la cause au lieu de rester figée, et
+le bouton « Nettoyer » reste utilisable pour réessayer.
 
 ## Scénario 6 — le journal enregistre
 

@@ -116,7 +116,7 @@ describe('createHttpCacheCleaner', () => {
   it("explique dans l'aperçu que la conservation par site est impossible", async () => {
     const preview = await createHttpCacheCleaner(fakeApi().api).preview(plan('httpCache', []));
     expect(preview.countable).toBe(false);
-    expect(preview.note).toMatch(/tout ou rien/i);
+    expect(preview.note).toMatch(/vidé en bloc/i);
   });
 });
 

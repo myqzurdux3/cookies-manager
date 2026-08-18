@@ -3,7 +3,9 @@ import type { Cleaner, CleanReport, Preview } from '../core/types';
 import type { BrowsingDataApi } from './storage';
 
 const NOTE =
-  "Le cache HTTP est tout ou rien : l'API navigateur n'accepte aucune exclusion par site pour cette catégorie.";
+  "Le cache HTTP est vidé en bloc. L'API accepterait bien une exclusion par origine, mais elle " +
+  "filtre sur l'URL de la ressource et non sur le site visité : protéger un site ne préserverait " +
+  'pas ce qu’il charge depuis un CDN tiers.';
 
 export function createHttpCacheCleaner(api: BrowsingDataApi): Cleaner {
   return {
