@@ -120,4 +120,66 @@ describe('createRouter', () => {
     await createRouter(deps)({ type: 'PREVIEW', profileId: 'p1' });
     expect(purges).toEqual([]);
   });
+
+  it('achemine chaque message vers la bonne dépendance', async () => {
+    const appels: string[] = [];
+    const trace =
+      (nom: string, valeur: unknown = undefined) =>
+      (...args: unknown[]) => {
+        appels.push(`${nom}(${args.map((a) => JSON.stringify(a)).join(',')})`);
+        return Promise.resolve(valeur);
+      };
+
+    const { deps } = fakeDeps();
+    const handle = createRouter({
+      ...deps,
+      profiles: {
+        ...deps.profiles,
+        list: trace('list', [PROFILE]) as never,
+        save: trace('save') as never,
+        remove: trace('remove') as never,
+        exportJson: trace('exportJson', '[]') as never,
+        importJson: trace('importJson') as never,
+      },
+      settings: { get: trace('getSettings', {}) as never, save: trace('saveSettings') as never },
+      vault: {
+        ...deps.vault,
+        describe: trace('describe', null) as never,
+        clear: trace('clear') as never,
+      },
+      restore: trace('restore', { restored: 0, failures: [] }) as never,
+    });
+
+    await handle({ type: 'LIST_PROFILES' });
+    await handle({ type: 'SAVE_PROFILE', profile: PROFILE });
+    await handle({ type: 'DELETE_PROFILE', id: 'p1' });
+    await handle({ type: 'EXPORT' });
+    await handle({ type: 'IMPORT', json: '[]' });
+    await handle({ type: 'GET_SETTINGS' });
+    await handle({
+      type: 'SAVE_SETTINGS',
+      settings: { vaultEnabled: false, vaultRetentionDays: 7 },
+    });
+    await handle({ type: 'VAULT_DESCRIBE' });
+    await handle({ type: 'VAULT_CLEAR' });
+    await handle({ type: 'VAULT_RESTORE', passphrase: 'phrase' });
+
+    expect(appels).toEqual([
+      'list()',
+      `save(${JSON.stringify(PROFILE)})`,
+      'remove("p1")',
+      'exportJson()',
+      'importJson("[]")',
+      'getSettings()',
+      'saveSettings({"vaultEnabled":false,"vaultRetentionDays":7})',
+      'describe()',
+      'clear()',
+      'restore("phrase")',
+    ]);
+  });
+
+  it('rend le journal du moteur', async () => {
+    const { deps } = fakeDeps();
+    expect(await createRouter(deps)({ type: 'JOURNAL' })).toEqual([]);
+  });
 });
