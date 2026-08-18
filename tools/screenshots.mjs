@@ -169,6 +169,11 @@ const proc = spawn(
     `--disable-extensions-except=${DIST}`,
     '--no-sandbox',
     '--disable-dev-shm-usage',
+    // Chrome 137 a désactivé `--load-extension`. Ces deux commutateurs le
+    // réautorisent ; sans eux l'extension ne se charge pas du tout et la seule
+    // cible `chrome-extension://` visible est une extension interne de Chrome.
+    '--disable-features=DisableLoadExtensionCommandLineSwitch',
+    '--enable-unsafe-extension-debugging',
     '--force-device-scale-factor=2',
     '--hide-scrollbars',
     '--no-first-run',

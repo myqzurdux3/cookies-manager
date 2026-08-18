@@ -121,7 +121,7 @@ async function waitFor(pred, extensionId, page = 'popup.html') {
  * de l'extension y soient liées : `chrome.cookies` est alors `undefined`. On
  * attend qu'il réponde vraiment avant de lui demander quoi que ce soit.
  */
-async function attendrePret(client, timeoutMs = 30000) {
+async function attendrePret(client, timeoutMs = 30000, extensionId = null) {
   // S'attacher à un worker le laisse parfois suspendu en attente du débogueur :
   // il n'exécute alors rien, et ses API ne sont jamais liées.
   await client.send('Runtime.runIfWaitingForDebugger').catch(() => {});
@@ -141,7 +141,19 @@ async function attendrePret(client, timeoutMs = 30000) {
     }
     await sleep(300);
   }
-  throw new Error(`les API de l'extension ne sont pas devenues disponibles : ${derniereErreur}`);
+  // Diagnostic : si l'extension n'est pas chargée, la page ouverte est une page
+  // d'erreur sans aucun `chrome.*`, ce qui donne exactement la même symptôme.
+  const cibles = await targets().catch(() => []);
+  const extensions = cibles
+    .filter((t) => t.url.startsWith('chrome-extension://'))
+    .map((t) => t.url)
+    .join('\n    ');
+  throw new Error(
+    `les API de l'extension ne sont pas devenues disponibles : ${derniereErreur}\n` +
+      `  extension attendue : ${extensionId ?? 'inconnue'}\n` +
+      `  cibles chrome-extension:// vues :\n    ${extensions || '(aucune)'}\n` +
+      `  sortie du navigateur : ${dernieresLignes()}`,
+  );
 }
 
 async function evaluate(client, expression) {
@@ -198,6 +210,11 @@ const proc = spawn(
     // inutilisable en conteneur, et /dev/shm y est trop petit pour Chrome.
     '--no-sandbox',
     '--disable-dev-shm-usage',
+    // Chrome 137 a désactivé `--load-extension`. Ces deux commutateurs le
+    // réautorisent ; sans eux l'extension ne se charge pas du tout et la seule
+    // cible `chrome-extension://` visible est une extension interne de Chrome.
+    '--disable-features=DisableLoadExtensionCommandLineSwitch',
+    '--enable-unsafe-extension-debugging',
     '--no-first-run',
     '--no-default-browser-check',
     '--disable-sync',
@@ -254,7 +271,7 @@ try {
   );
   const pageClient = await cdp(optionsPage.webSocketDebuggerUrl);
   await pageClient.send('Runtime.enable');
-  await attendrePret(pageClient);
+  await attendrePret(pageClient, 30000, extensionId);
   const swClient = pageClient;
 
   const send = (message) =>

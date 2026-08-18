@@ -26,6 +26,11 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       // Déclarations de types pures, sans code exécutable.
       exclude: ['src/vite-env.d.ts'],
+      // Seuils posés sous les valeurs atteintes : ils servent à repérer une
+      // régression, pas à imposer un chiffre. `background.ts` reste hors
+      // couverture unitaire — c'est du câblage `chrome.*`, exercé par
+      // `npm run verify:browser`.
+      thresholds: { lines: 88, statements: 88, branches: 88, functions: 95 },
     },
   },
 });
