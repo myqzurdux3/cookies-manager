@@ -13,6 +13,13 @@ export const VAULT_KEY = 'vault';
 export const DEFAULT_RETENTION_DAYS = 7;
 export const PBKDF2_ITERATIONS = 310_000;
 
+/**
+ * Le compte d'itérations est relu du stockage, pas de la constante : un coffre
+ * écrit par une version antérieure reste lisible. Il faut donc le borner —
+ * une valeur aberrante bloquerait le service worker le temps du calcul.
+ */
+export const MAX_PBKDF2_ITERATIONS = 1_000_000;
+
 const SALT_BYTES = 16;
 const IV_BYTES = 12;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -78,6 +85,9 @@ function isRecord(value: unknown): value is VaultRecord {
     typeof candidate.salt === 'string' &&
     typeof candidate.iv === 'string' &&
     typeof candidate.iterations === 'number' &&
+    Number.isInteger(candidate.iterations) &&
+    candidate.iterations >= 1 &&
+    candidate.iterations <= MAX_PBKDF2_ITERATIONS &&
     typeof candidate.createdAt === 'number'
   );
 }

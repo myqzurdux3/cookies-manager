@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { createVault, DEFAULT_RETENTION_DAYS, VAULT_KEY } from '../../src/core/vault';
+import {
+  createVault,
+  DEFAULT_RETENTION_DAYS,
+  PBKDF2_ITERATIONS,
+  VAULT_KEY,
+} from '../../src/core/vault';
 import type { StorageArea } from '../../src/core/profiles';
 
 // WebCrypto est global depuis Node 18 : pas besoin d'importer node:crypto, ce qui
@@ -137,5 +142,23 @@ describe('createVault', () => {
     const vault = createVault(crypto, area);
     expect(await vault.describe()).toBeNull();
     await expect(vault.read('phrase')).rejects.toThrow(/aucun coffre/i);
+  });
+
+  it("refuse un enregistrement dont le compte d'itérations est aberrant", async () => {
+    const { area, data } = fakeArea();
+    const vault = createVault(crypto, area);
+    await vault.store(COOKIES, 'phrase correcte', 1000);
+
+    // Le compte d'itérations est relu du stockage et passé à PBKDF2 : une
+    // valeur énorme bloquerait le service worker jusqu'à la fin du calcul.
+    (data[VAULT_KEY] as { iterations: number }).iterations = 1e12;
+    await expect(vault.read('phrase correcte')).rejects.toThrow(/illisible/i);
+    await expect(vault.describe()).rejects.toThrow(/illisible/i);
+  });
+
+  it("écrit bien le compte d'itérations annoncé", async () => {
+    const { area, data } = fakeArea();
+    await createVault(crypto, area).store(COOKIES, 'phrase correcte', 1000);
+    expect((data[VAULT_KEY] as { iterations: number }).iterations).toBe(PBKDF2_ITERATIONS);
   });
 });
