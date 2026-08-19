@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <em>Interface en français et en anglais — English UI included.</em>
+  <strong>Français</strong> · <a href="README.en.md">English</a>
 </p>
 
 <p align="center">

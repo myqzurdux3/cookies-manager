@@ -1,5 +1,7 @@
 # Ce que l'API du navigateur ne permet pas
 
+_English: [browser-limits.md](browser-limits.md)_
+
 Ces limites viennent de Chrome, pas de cette extension. Chacune est vérifiée
 contre la documentation officielle ou la source Chromium, référence à l'appui.
 

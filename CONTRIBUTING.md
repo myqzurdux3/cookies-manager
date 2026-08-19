@@ -36,6 +36,30 @@ lance les mêmes.
   Les contraintes d'API, les compromis et les pièges méritent un commentaire ;
   la paraphrase du code, non.
 
+## Textes et traductions
+
+L'interface est bilingue. Aucun texte visible ne s'écrit en dur dans le code :
+il vit dans `src/i18n/fr.ts`, qui sert de référence, et `src/i18n/en.ts` en
+dérive par typage — une clé oubliée en anglais ne compile pas. Le balisage
+figé porte `data-i18n`.
+
+Deux tests gardent cette règle :
+`tests/i18n/aucune-chaine-figee.test.ts` refuse toute chaîne accentuée hors des
+dictionnaires, et `tests/ui/static.test.ts` vérifie que chaque clé du HTML
+existe des deux côtés.
+
+Trois paires de fichiers changent ensemble :
+
+| Français                     | English                  |
+| ---------------------------- | ------------------------ |
+| `README.md`                  | `README.en.md`           |
+| `docs/limites-navigateur.md` | `docs/browser-limits.md` |
+| `docs/coffre.md`             | `docs/vault.md`          |
+
+Le reste de la documentation — l'audit, la recette manuelle, ce fichier — n'est
+qu'en français, volontairement : la maintenir en double coûterait plus qu'elle
+ne rapporte.
+
 ## L'audit
 
 [docs/AUDIT.md](docs/AUDIT.md) recense ce qui a été vérifié, ce qui ne l'a pas

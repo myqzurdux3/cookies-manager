@@ -731,3 +731,31 @@ de l'utilisateur — et c'est le script qui a été corrigé.
   français et à l'anglais et pas au-delà.
 - **Les captures du README restent en français**, avec la langue fixée dans
   `tools/screenshots.mjs` pour qu'elles ne suivent pas la machine de build.
+
+### Le dépôt en anglais
+
+`README.en.md` traduit la page d'accueil, et deux documents la suivent parce
+que c'est sur eux qu'elle appuie ses affirmations : `docs/browser-limits.md` et
+`docs/vault.md`. Chaque paire se renvoie l'une à l'autre en tête de fichier, et
+`CONTRIBUTING.md` recense les trois paires qui doivent changer ensemble.
+
+Vérifié avant de le dire : **0 lien relatif cassé** sur les onze fichiers
+Markdown du dépôt, et **12/12 URL externes** répondent 200 (badges, docs Chrome,
+sources Chromium). Les affirmations du README ont été recontrôlées une par une
+contre le code — aucun `fetch` ni `XMLHttpRequest` dans `src/`, aucune
+`dependencies` dans `package.json`, aucun `storage.sync`, `PASSWORDS_REMOVED_FROM`
+vaut bien 144, et les quatre réécritures de motifs annoncées sont couvertes par
+`tests/core/patterns.test.ts`.
+
+Cette relecture a trouvé un vrai défaut, pas une coquille : **deux raisons de
+refus étaient restées en français en dur** dans `patterns.ts` (`'motif vide'`,
+`'motif sans domaine'`). Ni le compilateur ni les tests ne pouvaient les voir.
+D'où `tests/i18n/aucune-chaine-figee.test.ts`, qui refuse désormais toute chaîne
+accentuée hors des dictionnaires — le garde-fou qui manquait à la phase 9.
+
+L'encart « About » du dépôt a été repris : description bilingue, sujet
+`brave-browser` retiré, `browsing-data`, `data-deletion` et `i18n` ajoutés.
+
+Restent en français, volontairement : `CONTRIBUTING.md`, `SECURITY.md`,
+`docs/AUDIT.md` et `docs/recette-manuelle.md`. Les traduire doublerait la
+surface à tenir à jour pour un lectorat qui, à ce stade, n'existe pas encore.

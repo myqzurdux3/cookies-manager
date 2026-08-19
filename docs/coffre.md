@@ -1,5 +1,7 @@
 # Coffre de cookies
 
+_English: [vault.md](vault.md)_
+
 Optionnel, désactivé par défaut. Une fois activé dans les options, les cookies
 condamnés sont chiffrés et sauvegardés **avant** suppression, restaurables
 pendant sept jours par défaut.
