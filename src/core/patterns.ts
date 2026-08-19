@@ -36,7 +36,7 @@ function toPunycode(host: string): string | null {
 
 export function normalizePattern(input: string): PatternResult {
   const original = input.trim().toLowerCase();
-  if (original === '') return { ok: false, reason: 'motif vide' };
+  if (original === '') return { ok: false, reason: msg().patterns.empty };
   if (original === '*') return { ok: true, pattern: '*', changed: false };
 
   let pattern = original;
@@ -56,7 +56,7 @@ export function normalizePattern(input: string): PatternResult {
 
   const body = pattern.startsWith('*.') ? pattern.slice(2) : pattern;
 
-  if (body === '') return { ok: false, reason: 'motif sans domaine' };
+  if (body === '') return { ok: false, reason: msg().patterns.noDomain };
   if (body.includes('*')) return { ok: false, reason: msg().patterns.wildcardLead };
   if (INVALID_CHARS.test(body)) return { ok: false, reason: msg().patterns.forbiddenChar };
   if (body.startsWith('.') || body.endsWith('.') || body.includes('..')) {

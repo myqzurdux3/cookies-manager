@@ -236,6 +236,8 @@ export const EN: Dict = {
   },
 
   patterns: {
+    empty: 'empty pattern',
+    noDomain: 'pattern without a domain',
     wildcardLead: 'the wildcard must come first, as *.example.com',
     forbiddenChar: 'forbidden character in the pattern',
     misplacedDot: 'misplaced dot in the pattern',

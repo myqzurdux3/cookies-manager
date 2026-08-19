@@ -249,6 +249,8 @@ export const FR = {
   },
 
   patterns: {
+    empty: 'motif vide',
+    noDomain: 'motif sans domaine',
     wildcardLead: 'le wildcard doit être en tête, sous la forme *.exemple.com',
     forbiddenChar: 'caractère interdit dans le motif',
     misplacedDot: 'point mal placé dans le motif',
