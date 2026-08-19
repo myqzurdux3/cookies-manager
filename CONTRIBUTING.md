@@ -48,17 +48,17 @@ Deux tests gardent cette règle :
 dictionnaires, et `tests/ui/static.test.ts` vérifie que chaque clé du HTML
 existe des deux côtés.
 
-Trois paires de fichiers changent ensemble :
+Quatre paires de fichiers changent ensemble :
 
 | Français                     | English                  |
 | ---------------------------- | ------------------------ |
 | `README.md`                  | `README.en.md`           |
+| `SECURITY.md`                | `SECURITY.en.md`         |
 | `docs/limites-navigateur.md` | `docs/browser-limits.md` |
 | `docs/coffre.md`             | `docs/vault.md`          |
 
-Le reste de la documentation — l'audit, la recette manuelle, ce fichier — n'est
-qu'en français, volontairement : la maintenir en double coûterait plus qu'elle
-ne rapporte.
+Le reste — l'audit, la recette manuelle, ce fichier — n'est qu'en français,
+volontairement : le maintenir en double coûterait plus que cela ne rapporte.
 
 ## L'audit
 

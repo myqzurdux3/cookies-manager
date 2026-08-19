@@ -103,14 +103,21 @@ No network request, no telemetry, **no runtime dependency**. Profiles stay in
 `chrome.storage.local` and are never synchronised. The `<all_urls>` permission
 is used for cookie operations only.
 
+## Security
+
+The threat model, the vault's limits and how to report a vulnerability are in
+[SECURITY.en.md](SECURITY.en.md). In short: open a private advisory rather than
+a public issue, and never paste real cookie values into a report — those are
+live session tokens.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) _(in French)_. In short: `npm test`,
 `npm run lint`, and `npm run verify:browser`, which loads the extension into a
 real browser.
 
-The rest of the documentation — the audit, the manual test plan, the security
-policy — is in French. The application itself is bilingual.
+The rest of the documentation — the audit and the manual test plan — is in
+French. The application itself is bilingual.
 
 ## Licence
 

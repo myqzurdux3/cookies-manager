@@ -1,5 +1,7 @@
 # Sécurité
 
+_English: [SECURITY.en.md](SECURITY.en.md)_
+
 ## Signaler une faille
 
 Ouvrez un [avis de sécurité privé](https://github.com/myqzurdux3/cookies-manager/security/advisories/new)

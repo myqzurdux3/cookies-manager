@@ -734,14 +734,18 @@ de l'utilisateur — et c'est le script qui a été corrigé.
 
 ### Le dépôt en anglais
 
-`README.en.md` traduit la page d'accueil, et deux documents la suivent parce
-que c'est sur eux qu'elle appuie ses affirmations : `docs/browser-limits.md` et
-`docs/vault.md`. Chaque paire se renvoie l'une à l'autre en tête de fichier, et
-`CONTRIBUTING.md` recense les trois paires qui doivent changer ensemble.
+`README.en.md` traduit la page d'accueil. Trois documents la suivent : les deux
+sur lesquels elle appuie ses affirmations — `docs/browser-limits.md` et
+`docs/vault.md` — et `SECURITY.en.md`, parce qu'un rapport de faille en anglais
+ne doit pas buter sur une politique en français. Chaque paire se renvoie l'autre
+en tête de fichier, et `CONTRIBUTING.md` recense les quatre paires qui doivent
+changer ensemble.
 
-Vérifié avant de le dire : **0 lien relatif cassé** sur les onze fichiers
-Markdown du dépôt, et **12/12 URL externes** répondent 200 (badges, docs Chrome,
-sources Chromium). Les affirmations du README ont été recontrôlées une par une
+Vérifié avant de le dire : **0 lien relatif cassé** sur les 11 fichiers Markdown
+de la racine et de `docs/`, et **12/12 URL externes** répondent 200 (badges, docs
+Chrome, sources Chromium). Les 7 chemins signalés dans `docs/superpowers/` sont
+des `src="…"` à l'intérieur d'exemples de code d'un plan archivé, que GitHub rend
+comme du code et non comme des liens. Les affirmations du README ont été recontrôlées une par une
 contre le code — aucun `fetch` ni `XMLHttpRequest` dans `src/`, aucune
 `dependencies` dans `package.json`, aucun `storage.sync`, `PASSWORDS_REMOVED_FROM`
 vaut bien 144, et les quatre réécritures de motifs annoncées sont couvertes par
@@ -756,6 +760,8 @@ accentuée hors des dictionnaires — le garde-fou qui manquait à la phase 9.
 L'encart « About » du dépôt a été repris : description bilingue, sujet
 `brave-browser` retiré, `browsing-data`, `data-deletion` et `i18n` ajoutés.
 
-Restent en français, volontairement : `CONTRIBUTING.md`, `SECURITY.md`,
-`docs/AUDIT.md` et `docs/recette-manuelle.md`. Les traduire doublerait la
-surface à tenir à jour pour un lectorat qui, à ce stade, n'existe pas encore.
+Restent en français, volontairement : `CONTRIBUTING.md`, `docs/AUDIT.md` et
+`docs/recette-manuelle.md`. Les traduire doublerait la surface à tenir à jour
+pour un lectorat qui, à ce stade, n'existe pas encore — alors que la politique
+de sécurité, elle, doit être lisible par quelqu'un qui arrive avec une faille et
+sans le français.
