@@ -1,5 +1,7 @@
 # Contribuer
 
+_English: [CONTRIBUTING.en.md](CONTRIBUTING.en.md)_
+
 ## Mise en route
 
 ```bash
@@ -48,17 +50,18 @@ Deux tests gardent cette règle :
 dictionnaires, et `tests/ui/static.test.ts` vérifie que chaque clé du HTML
 existe des deux côtés.
 
-Quatre paires de fichiers changent ensemble :
+Cinq paires de fichiers changent ensemble :
 
 | Français                     | English                  |
 | ---------------------------- | ------------------------ |
 | `README.md`                  | `README.en.md`           |
 | `SECURITY.md`                | `SECURITY.en.md`         |
+| `CONTRIBUTING.md`            | `CONTRIBUTING.en.md`     |
 | `docs/limites-navigateur.md` | `docs/browser-limits.md` |
 | `docs/coffre.md`             | `docs/vault.md`          |
 
-Le reste — l'audit, la recette manuelle, ce fichier — n'est qu'en français,
-volontairement : le maintenir en double coûterait plus que cela ne rapporte.
+Restent en français seulement : `docs/AUDIT.md` et `docs/recette-manuelle.md`.
+Ce sont des documents de travail, pas des documents d'accueil.
 
 ## L'audit
 
@@ -78,8 +81,9 @@ vérifié, avec ses sources.
 jetable de Chrome, en headless, et exerce le vrai chemin des messages :
 keep-list, aperçu contre nettoyage, sauvegarde et restauration du coffre,
 avertissement de remplacement du coffre, masquage réel des écrans de la popup,
-et rejet d'un message inconnu — dix vérifications. Le profil est neuf et supprimé à la fin ; votre profil
-personnel n'est jamais touché.
+bascule de langue du service worker, et rejet d'un message inconnu — treize
+vérifications. Le profil est neuf et supprimé à la fin ; votre profil personnel
+n'est jamais touché.
 
 Ce script ne vérifie rien de visuel.
 

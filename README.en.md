@@ -112,12 +112,12 @@ live session tokens.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) _(in French)_. In short: `npm test`,
+See [CONTRIBUTING.en.md](CONTRIBUTING.en.md). In short: `npm test`,
 `npm run lint`, and `npm run verify:browser`, which loads the extension into a
 real browser.
 
-The rest of the documentation — the audit and the manual test plan — is in
-French. The application itself is bilingual.
+The audit (`docs/AUDIT.md`) and the manual test plan are in French only: they
+are working documents. Everything a newcomer reads is bilingual.
 
 ## Licence
 

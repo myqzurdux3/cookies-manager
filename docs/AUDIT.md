@@ -648,15 +648,27 @@ ouvert.
   défaut de `hidden` pourrait revenir sous une autre forme sans que rien ne
   sonne.
 
-### Prochaine étape prévue
+### Release `v0.1.0`
 
-Une release `v0.1.0` est souhaitée, sans date. Elle demande : figer la version,
-poser un tag, écrire un `CHANGELOG.md`, et attacher un zip de `dist/`. Pour une
-publication sur le Chrome Web Store, il faudrait en plus une politique de
-confidentialité — la boutique l'exige dès qu'une extension touche aux données de
-navigation.
+Publiée le 2026-08-19 : `CHANGELOG.md` bilingue, tag `v0.1.0`, et un zip de
+`dist/` attaché à la release GitHub. Version figée à `0.1.0` dans
+`package.json` et dans le manifeste — elles l'étaient déjà, rien à changer.
 
-Rien de tout cela n'est fait à ce jour.
+Mesures prises juste avant de poser le tag, pas reprises de mémoire : 341 tests,
+96 % de couverture, `npm audit` à 0 vulnérabilité (avec et sans les dépendances
+de développement), 13/13 vérifications dans Chromium, et 0 lien cassé sur les 13
+fichiers Markdown.
+
+**La recette manuelle n'a pas été jouée** pour cette version. Le propriétaire a
+choisi de s'en passer — monter un profil Chrome dédié coûtait plus que ça ne
+rapportait à ce stade. C'est écrit dans le `CHANGELOG.md`, dans les deux
+langues : ce qui n'a pas été vérifié doit se lire dans les notes de version, pas
+seulement ici.
+
+Pour une publication sur le Chrome Web Store, il faudrait en plus une politique
+de confidentialité — la boutique l'exige dès qu'une extension touche aux données
+de navigation. Ce n'est pas fait : la release GitHub n'est pas une soumission à
+la boutique.
 
 ### Les trois décisions de produit, tranchées
 
@@ -738,8 +750,8 @@ de l'utilisateur — et c'est le script qui a été corrigé.
 sur lesquels elle appuie ses affirmations — `docs/browser-limits.md` et
 `docs/vault.md` — et `SECURITY.en.md`, parce qu'un rapport de faille en anglais
 ne doit pas buter sur une politique en français. Chaque paire se renvoie l'autre
-en tête de fichier, et `CONTRIBUTING.md` recense les quatre paires qui doivent
-changer ensemble.
+en tête de fichier, et `CONTRIBUTING.md` recense les paires qui doivent changer
+ensemble — cinq depuis que lui-même est traduit.
 
 Vérifié avant de le dire : **0 lien relatif cassé** sur les 11 fichiers Markdown
 de la racine et de `docs/`, et **12/12 URL externes** répondent 200 (badges, docs
@@ -760,8 +772,7 @@ accentuée hors des dictionnaires — le garde-fou qui manquait à la phase 9.
 L'encart « About » du dépôt a été repris : description bilingue, sujet
 `brave-browser` retiré, `browsing-data`, `data-deletion` et `i18n` ajoutés.
 
-Restent en français, volontairement : `CONTRIBUTING.md`, `docs/AUDIT.md` et
-`docs/recette-manuelle.md`. Les traduire doublerait la surface à tenir à jour
-pour un lectorat qui, à ce stade, n'existe pas encore — alors que la politique
-de sécurité, elle, doit être lisible par quelqu'un qui arrive avec une faille et
-sans le français.
+Restent en français seulement : `docs/AUDIT.md` et `docs/recette-manuelle.md`.
+Ce sont des documents de travail, lus par quelqu'un qui a déjà décidé de creuser.
+Tout ce qu'un arrivant lit — page d'accueil, politique de sécurité, guide de
+contribution, limites du navigateur, coffre — existe dans les deux langues.
